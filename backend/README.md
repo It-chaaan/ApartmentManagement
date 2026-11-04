@@ -1,3 +1,3 @@
 # Laravel API
 
-See the [project setup guide](../README.md) for XAMPP configuration, migrations, seeding, owner setup, API access, and test commands.
+See the [project overview](../README.md) for the current public website, staff dashboard, technology, and roadmap.

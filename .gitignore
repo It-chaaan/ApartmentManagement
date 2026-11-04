@@ -1,0 +1,35 @@
+# Local agent guidance is intentionally not distributed with the project.
+/.agents/
+/.agens/
+/AGENTS.md
+/agents.md
+**/.agents/
+**/.agens/
+**/AGENTS.md
+**/agents.md
+
+# Local configuration and credentials.
+.env
+.env.*
+!.env.example
+auth.json
+
+# Dependencies and generated output.
+node_modules/
+vendor/
+dist/
+dist-ssr/
+public/build/
+public/hot
+
+# Runtime files and local tooling.
+*.log
+*.local
+.phpunit.result.cache
+.phpunit.cache/
+storage/logs/
+storage/framework/cache/
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

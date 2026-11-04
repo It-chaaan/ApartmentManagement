@@ -21,6 +21,7 @@ class ManagementController extends Controller
             return response()->json(['message' => 'The email or password is incorrect.'], 422);
         }
         $request->session()->regenerate();
+
         return response()->json(['user' => $request->user()->only('id', 'name', 'email', 'role')]);
     }
 
@@ -29,6 +30,7 @@ class ManagementController extends Controller
         Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
         return response()->json(['message' => 'Signed out.']);
     }
 
@@ -53,6 +55,7 @@ class ManagementController extends Controller
             'amenities.*' => ['string', 'max:100'],
         ]);
         $building->update($data);
+
         return response()->json($building->loadCount('rooms'));
     }
 
@@ -67,6 +70,7 @@ class ManagementController extends Controller
         foreach ($filters as $key => $value) {
             $query->where($key, $value);
         }
+
         return response()->json($query->get());
     }
 
@@ -95,6 +99,7 @@ class ManagementController extends Controller
             return response()->json(['message' => 'Building 2 rooms do not have a recorded side.', 'errors' => ['side' => ['Building 2 rooms do not have a recorded side.']]], 422);
         }
         $room->update($data);
+
         return response()->json($room->load(['building', 'photos']));
     }
 
@@ -104,12 +109,14 @@ class ManagementController extends Controller
         $file = $request->file('photo');
         $path = $file->store('room-photos/'.$room->id, 'local');
         $photo = $room->photos()->create(['path' => $path, 'original_name' => $file->getClientOriginalName()]);
+
         return response()->json($photo, 201);
     }
 
     public function photo(RoomPhoto $photo)
     {
         abort_unless(Storage::disk('local')->exists($photo->path), 404);
+
         return response()->file(Storage::disk('local')->path($photo->path), ['Content-Type' => Storage::disk('local')->mimeType($photo->path), 'Cache-Control' => 'private, no-store']);
     }
 
@@ -122,6 +129,7 @@ class ManagementController extends Controller
             'password' => ['required', 'string', 'min:12', 'confirmed'],
         ]);
         $user = User::create(['name' => $data['name'], 'email' => $data['email'], 'password' => $data['password'], 'role' => 'staff']);
+
         return response()->json(['user' => $user->only('id', 'name', 'email', 'role')], 201);
     }
 }

@@ -1,5 +1,5 @@
 import { request } from '../api/client'
-import type { Building, Photo, Room, RoomForm, StaffUser } from '../types/staff'
+import type { Building, Contract, Photo, Room, RoomForm, StaffUser, Tenant } from '../types/staff'
 
 export const getSession = () => request<{ user: StaffUser }>('/api/me')
 export const getBuildings = () => request<Building[]>('/api/buildings')
@@ -38,3 +38,11 @@ export const setPhotoVisibility = (photo: Photo) => request(`/api/photos/${photo
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({ is_public: !photo.is_public }),
 })
+
+export const getTenants = () => request<Tenant[]>('/api/tenants')
+export const getContracts = () => request<Contract[]>('/api/contracts')
+export const saveTenant = (values: Record<string, string>, id?: number) => request<Tenant>(id ? `/api/tenants/${id}` : '/api/tenants', { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const createContract = (values: object) => request<Contract>('/api/contracts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const moveIn = (id: number, values: object) => request<Contract>(`/api/contracts/${id}/move-in`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const endTenancy = (id: number, values: object) => request<Contract>(`/api/contracts/${id}/end`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const uploadContract = (id: number, file: File) => { const data = new FormData(); data.append('file', file); return request(`/api/contracts/${id}/files`, { method: 'POST', body: data }) }

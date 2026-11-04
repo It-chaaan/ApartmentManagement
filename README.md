@@ -10,13 +10,13 @@ The layout works without apartment photos. Photos uploaded by staff stay private
 
 ## Staff dashboard
 
-The private dashboard lets authorized staff sign in, view the two buildings, filter rooms by building, floor, and status, edit room details, and upload photos. Staff can approve or revoke a photo's public visibility separately from its room status. The dashboard is available at `/staff`; the public homepage is at `/`.
+The private dashboard lets authorized staff sign in, view the two buildings, filter rooms by building, floor, and status, edit room details, and upload photos. Staff can approve or revoke a photo's public visibility separately from its room status. Staff can also maintain tenant contact and emergency details, prepare contracts, record move-in amounts, manage renewals and occupancy history, and keep signed PDF versions private. The dashboard is available at `/staff`; the public homepage is at `/`.
 
 ## Current features and roadmap
 
-**Implemented:** public building and room sections, Messenger inquiries, staff sign-in, building views and room editing, room status tracking, private photo uploads, and staff-controlled photo publishing. The initial property records contain two buildings and 18 rooms. Room occupancy begins unverified, and apartment photos have not been supplied.
+**Implemented:** public building and room sections, Messenger inquiries, staff sign-in, building views and room editing, room status tracking, private photo uploads, staff-controlled photo publishing, tenant profiles, occupancy history, and contract records with private signed-file versions. The initial property records contain two buildings and 18 rooms. Room occupancy begins unverified, and apartment photos have not been supplied.
 
-**Planned:** tenant records, contracts, payments and billing, and inspections. These workflows are not part of the current app.
+**Later work:** monthly billing, online payments, refunds, deductions, a tenant portal, and inspection checklists. These workflows are not part of the current app.
 
 ## Project structure and technology
 
@@ -31,4 +31,4 @@ The frontend uses Laravel's API for property data and staff actions. Laravel sto
 
 Staff authentication protects management data. Photos are stored privately by default, and public access requires a separate approval. Inputs and uploads are validated. Credentials and local environment files are excluded from Git.
 
-Phases 1 and 2—the staff dashboard and public website—are implemented. The next development work can build on these records without treating unverified room status as public availability or adding substitute apartment imagery.
+Phases 1 through 3 cover the staff dashboard, public website, tenants, occupancy, and contracts. The public website continues to show only approved photos and verified availability. Signed contracts and tenant records remain private.

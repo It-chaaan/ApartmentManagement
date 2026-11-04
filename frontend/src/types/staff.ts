@@ -40,3 +40,19 @@ export type RoomForm = {
   description: string
   status: Status
 }
+
+export type Tenant = {
+  id: number; full_name: string; phone: string | null; email: string | null; contact_address: string | null
+  emergency_name: string | null; emergency_phone: string | null; emergency_relationship: string | null
+  contracts: Contract[]
+}
+
+export type ContractFile = { id: number; original_name: string; created_at: string }
+export type Contract = {
+  id: number; tenant_id: number; room_id: number; previous_contract_id: number | null
+  tenant: Tenant; room: Room; previous_contract?: Contract | null; files: ContractFile[]
+  signed_on: string; starts_on: string; ends_on: string; monthly_rent: string; due_day: number
+  advance_amount: string; deposit_amount: string; advance_paid: string | null; deposit_paid: string | null
+  moved_in_on: string | null; ended_on: string | null; end_review_note: string | null
+  status: 'draft' | 'active' | 'ended' | 'renewed'
+}

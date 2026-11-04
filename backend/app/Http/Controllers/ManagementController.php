@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Building;
+use App\Models\Contract;
 use App\Models\Room;
 use App\Models\RoomPhoto;
 use App\Models\User;
@@ -97,6 +98,9 @@ class ManagementController extends Controller
         }
         if ($room->building->slug === 'building-2' && array_key_exists('side', $data) && $data['side'] !== null) {
             return response()->json(['message' => 'Building 2 rooms do not have a recorded side.', 'errors' => ['side' => ['Building 2 rooms do not have a recorded side.']]], 422);
+        }
+        if (isset($data['status']) && $data['status'] !== 'occupied' && Contract::where('active_room_id', $room->id)->exists()) {
+            return response()->json(['message' => 'End the active tenancy before changing this room status.', 'errors' => ['status' => ['End the active tenancy before changing this room status.']]], 422);
         }
         $room->update($data);
 

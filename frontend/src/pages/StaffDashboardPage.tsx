@@ -1,35 +1,17 @@
 import { useEffect, useMemo, useState } from 'react'
+import * as staff from '../services/staff'
+import type { Building, Photo, Room, RoomForm, StaffUser, Status } from '../types/staff'
+import { formatStaffPeso as peso, roomToForm as toForm, staffRoomSize as size, titleCase as title } from '../utils/property'
 
-type Status = 'unverified' | 'available' | 'reserved' | 'occupied' | 'maintenance'
-type Building = { id: number; name: string; address: string; lot_area_sqm: string; description: string; amenities: string[]; rooms_count: number }
-type Photo = { id: number; url: string; original_name: string; is_public: boolean }
-type Room = { id: number; building_id: number; building: { name: string }; code: string; floor: number; side: string | null; size_min_sqm: string; size_max_sqm: string; monthly_rent: string; amenities: string[]; description: string | null; status: Status; photos: Photo[] }
-type User = { name: string; email: string; role: string }
-type Form = { floor: string; side: string; size_min_sqm: string; size_max_sqm: string; monthly_rent: string; amenities: string; description: string; status: Status }
 const statuses: Status[] = ['unverified', 'available', 'reserved', 'occupied', 'maintenance']
-const peso = (v: string) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP' }).format(Number(v))
-const size = (r: Room) => r.size_min_sqm === r.size_max_sqm ? `${Number(r.size_min_sqm)} sqm` : `Approx. ${Number(r.size_min_sqm)}–${Number(r.size_max_sqm)} sqm`
-const title = (s: string) => s[0].toUpperCase() + s.slice(1)
-const toForm = (r: Room): Form => ({ floor: String(r.floor), side: r.side ?? '', size_min_sqm: r.size_min_sqm, size_max_sqm: r.size_max_sqm, monthly_rent: r.monthly_rent, amenities: r.amenities.join(', '), description: r.description ?? '', status: r.status })
 
-async function api<T>(path: string, options: RequestInit = {}): Promise<T> {
-  const csrf = options.method && options.method !== 'GET' ? await fetch('/api/csrf').then(r => r.json()) as { token: string } : null
-  const headers = new Headers(options.headers)
-  headers.set('Accept', 'application/json')
-  if (csrf) headers.set('X-CSRF-TOKEN', csrf.token)
-  const response = await fetch(path, { ...options, credentials: 'same-origin', headers })
-  const body = await response.json().catch(() => ({}))
-  if (!response.ok) throw new Error(body.errors ? Object.values(body.errors).flat().join(' ') : body.message || `Request failed (${response.status}).`)
-  return body as T
-}
-
-function App() {
-  const [user, setUser] = useState<User | null>(null)
+function StaffDashboardPage() {
+  const [user, setUser] = useState<StaffUser | null>(null)
   const [loading, setLoading] = useState(true)
   const [buildings, setBuildings] = useState<Building[]>([])
   const [rooms, setRooms] = useState<Room[]>([])
   const [selected, setSelected] = useState<Room | null>(null)
-  const [form, setForm] = useState<Form | null>(null)
+  const [form, setForm] = useState<RoomForm | null>(null)
   const [buildingFilter, setBuildingFilter] = useState('all')
   const [floorFilter, setFloorFilter] = useState('all')
   const [statusFilter, setStatusFilter] = useState('all')
@@ -39,25 +21,25 @@ function App() {
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
-  useEffect(() => { api<{ user: User }>('/api/me').then(x => setUser(x.user)).catch(() => {}).finally(() => setLoading(false)) }, [])
+  useEffect(() => { staff.getSession().then(x => setUser(x.user)).catch(() => {}).finally(() => setLoading(false)) }, [])
   useEffect(() => {
     if (!user) return
-    Promise.all([api<Building[]>('/api/buildings'), api<Room[]>('/api/rooms')]).then(([b, r]) => { setBuildings(b); setRooms(r) }).catch(e => setError(e.message))
+    Promise.all([staff.getBuildings(), staff.getRooms()]).then(([b, r]) => { setBuildings(b); setRooms(r) }).catch(e => setError(e.message))
   }, [user])
   const filtered = useMemo(() => rooms.filter(r => (buildingFilter === 'all' || String(r.building_id) === buildingFilter) && (floorFilter === 'all' || String(r.floor) === floorFilter) && (statusFilter === 'all' || r.status === statusFilter)), [rooms, buildingFilter, floorFilter, statusFilter])
   const open = (r: Room) => { setSelected(r); setForm(toForm(r)); setError(''); setNotice('') }
-  const refresh = async (id: number) => { const r = await api<Room>(`/api/rooms/${id}`); setRooms(old => old.map(x => x.id === id ? r : x)); setSelected(r); setForm(toForm(r)) }
+  const refresh = async (id: number) => { const r = await staff.getRoom(id); setRooms(old => old.map(x => x.id === id ? r : x)); setSelected(r); setForm(toForm(r)) }
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setBusy(true)
-    try { const x = await api<{ user: User }>('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }) }); setUser(x.user); setPassword('') }
+    try { const x = await staff.signIn(email, password); setUser(x.user); setPassword('') }
     catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
-  const signOut = async () => { try { await api('/api/logout', { method: 'POST' }); setUser(null); setRooms([]); setBuildings([]); setSelected(null) } catch (e) { setError((e as Error).message) } }
+  const signOut = async () => { try { await staff.signOut(); setUser(null); setRooms([]); setBuildings([]); setSelected(null) } catch (e) { setError((e as Error).message) } }
   const save = async (e: React.FormEvent) => {
     e.preventDefault(); if (!selected || !form) return
     setBusy(true); setError(''); setNotice('')
     try {
-      await api(`/api/rooms/${selected.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ floor: Number(form.floor), side: form.side || null, size_min_sqm: form.size_min_sqm, size_max_sqm: form.size_max_sqm, monthly_rent: form.monthly_rent, amenities: form.amenities.split(',').map(x => x.trim()).filter(Boolean), description: form.description || null, status: form.status }) })
+      await staff.saveRoom(selected.id, form)
       await refresh(selected.id); setNotice('Room details saved.')
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
@@ -65,15 +47,15 @@ function App() {
     const file = e.target.files?.[0]; if (!file || !selected) return
     setError(''); setNotice('')
     if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 5 * 1024 * 1024) { setError('Choose a JPEG, PNG, or WebP image up to 5 MB.'); e.target.value = ''; return }
-    const data = new FormData(); data.append('photo', file); setBusy(true)
-    try { await api(`/api/rooms/${selected.id}/photos`, { method: 'POST', body: data }); await refresh(selected.id); setNotice('Photo uploaded.') }
+    setBusy(true)
+    try { await staff.uploadRoomPhoto(selected.id, file); await refresh(selected.id); setNotice('Photo uploaded.') }
     catch (e) { setError((e as Error).message) } finally { setBusy(false); e.target.value = '' }
   }
   const setPhotoVisibility = async (photo: Photo) => {
     if (!selected) return
     setBusy(true); setError(''); setNotice('')
     try {
-      await api(`/api/photos/${photo.id}/visibility`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ is_public: !photo.is_public }) })
+      await staff.setPhotoVisibility(photo)
       await refresh(selected.id)
       setNotice(photo.is_public ? 'Photo removed from the public website.' : 'Photo approved for the public website.')
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
@@ -89,4 +71,4 @@ function App() {
   </main>
 }
 
-export default App
+export default StaffDashboardPage

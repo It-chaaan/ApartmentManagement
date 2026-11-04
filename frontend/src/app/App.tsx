@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import PublicApp from './PublicApp'
-import StaffApp from './StaffApp'
+import PublicHomePage from '../pages/PublicHomePage'
+import StaffDashboardPage from '../pages/StaffDashboardPage'
 
 function App() {
   const isStaff = window.location.pathname === '/staff' || window.location.pathname.startsWith('/staff/')
@@ -20,7 +20,7 @@ function App() {
     }
   }, [isStaff])
 
-  return isStaff ? <StaffApp /> : <PublicApp />
+  return isStaff ? <StaffDashboardPage /> : <PublicHomePage />
 }
 
 export default App

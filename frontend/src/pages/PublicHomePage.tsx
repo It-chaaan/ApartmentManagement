@@ -1,42 +1,13 @@
-import { useEffect, useState } from 'react'
-import './public.css'
-
-type PublicPhoto = { url: string; building: string; room: string }
-type PublicRoom = { code: string; floor: number; side: string | null; size_min_sqm: string; size_max_sqm: string; monthly_rent: string; availability: 'available' | 'ask'; photos: PublicPhoto[] }
-type PublicBuilding = { slug: string; name: string; address: string; lot_area_sqm: string; room_count: number; amenities: string[]; rooms: PublicRoom[] }
-type PublicSite = { buildings: PublicBuilding[] }
+import { useState } from 'react'
+import { RoomCard } from '../components/public/RoomCard'
+import { usePublicSite } from '../hooks/usePublicSite'
+import { buildingRent, buildingSize } from '../utils/property'
+import '../styles/public.css'
 
 const messenger = 'https://www.facebook.com/christian.guillermo.146'
-const peso = (value: string) => new Intl.NumberFormat('en-PH', { style: 'currency', currency: 'PHP', maximumFractionDigits: 0 }).format(Number(value))
-const roomSize = (room: PublicRoom) => room.size_min_sqm === room.size_max_sqm
-  ? `${Number(room.size_min_sqm)} sqm`
-  : `Approx. ${Number(room.size_min_sqm)}–${Number(room.size_max_sqm)} sqm`
-const floorName = (floor: number) => floor === 1 ? 'First floor' : 'Second floor'
-const buildingSize = (building: PublicBuilding) => {
-  if (!building.rooms.length) return '—'
-  const min = Math.min(...building.rooms.map(room => Number(room.size_min_sqm)))
-  const max = Math.max(...building.rooms.map(room => Number(room.size_max_sqm)))
-  return min === max ? `${min} sqm` : `Approx. ${min}–${max} sqm`
-}
-const buildingRent = (building: PublicBuilding) => {
-  if (!building.rooms.length) return '—'
-  const rents = building.rooms.map(room => Number(room.monthly_rent))
-  const min = Math.min(...rents)
-  const max = Math.max(...rents)
-  return min === max ? peso(String(min)) : `${peso(String(min))}–${peso(String(max))}`
-}
-
-function PublicApp() {
-  const [site, setSite] = useState<PublicSite | null>(null)
-  const [error, setError] = useState('')
+function PublicHomePage() {
+  const { site, error } = usePublicSite()
   const [activeBuilding, setActiveBuilding] = useState('building-1')
-
-  useEffect(() => {
-    fetch('/api/public/site', { headers: { Accept: 'application/json' } })
-      .then(async response => { if (!response.ok) throw new Error('Property information is temporarily unavailable. Please try again later.'); return response.json() as Promise<PublicSite> })
-      .then(setSite)
-      .catch(e => setError((e as Error).message))
-  }, [])
 
   const buildings = site?.buildings ?? []
   const selected = buildings.find(building => building.slug === activeBuilding) ?? buildings[0]
@@ -76,7 +47,7 @@ function PublicApp() {
         <section className="amenities-band" aria-labelledby="amenities-heading"><div><span className="section-number">02 / EVERYDAY ESSENTIALS</span><h2 id="amenities-heading">Details that<br/><em>make a difference.</em></h2></div><ul><li><span>01</span> Furnished rooms</li><li><span>02</span> Motorcycle parking</li><li><span>03</span> Individual water meters</li><li><span>04</span> Individual electricity meters</li></ul></section>
 
         <section className="public-section rooms-section" id="rooms" aria-labelledby="rooms-heading"><div className="rooms-head"><div><span className="section-number">03 / THE ROOMS</span><h2 id="rooms-heading">Find a room<br/><em>that fits.</em></h2></div><p>Browse the room layout and ask us directly about current availability. Only rooms confirmed as available are labeled available here.</p></div>
-          {buildings.length > 0 && <><div className="room-tabs" role="group" aria-label="Choose a building">{buildings.map(building => <button key={building.slug} type="button" className={selected?.slug === building.slug ? 'active' : ''} onClick={() => setActiveBuilding(building.slug)} aria-pressed={selected?.slug === building.slug}>{building.name} <span>{building.room_count} rooms</span></button>)}</div><div className="room-grid">{selected?.rooms.map(room => <article className="room-card" key={room.code}><div className="room-card-top"><span>{floorName(room.floor)}{room.side ? ` · ${room.side} side` : ''}</span><span className={room.availability === 'available' ? 'room-available' : 'room-ask'}>{room.availability === 'available' ? 'Available' : 'Ask for availability'}</span></div><h3>Room {room.code}</h3><div className="room-card-bottom"><span>{roomSize(room)}</span><strong>{peso(room.monthly_rent)}<small> / month</small></strong></div></article>)}</div></>}
+          {buildings.length > 0 && <><div className="room-tabs" role="group" aria-label="Choose a building">{buildings.map(building => <button key={building.slug} type="button" className={selected?.slug === building.slug ? 'active' : ''} onClick={() => setActiveBuilding(building.slug)} aria-pressed={selected?.slug === building.slug}>{building.name} <span>{building.room_count} rooms</span></button>)}</div><div className="room-grid">{selected?.rooms.map(room => <RoomCard key={room.code} room={room} />)}</div></>}
           <a className="inline-inquiry" href={messenger} target="_blank" rel="noopener noreferrer">Ask about a room on Messenger <span aria-hidden="true">↗</span></a>
         </section>
 
@@ -90,4 +61,4 @@ function PublicApp() {
   </div>
 }
 
-export default PublicApp
+export default PublicHomePage

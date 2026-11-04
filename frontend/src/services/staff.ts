@@ -1,0 +1,40 @@
+import { request } from '../api/client'
+import type { Building, Photo, Room, RoomForm, StaffUser } from '../types/staff'
+
+export const getSession = () => request<{ user: StaffUser }>('/api/me')
+export const getBuildings = () => request<Building[]>('/api/buildings')
+export const getRooms = () => request<Room[]>('/api/rooms')
+export const getRoom = (id: number) => request<Room>(`/api/rooms/${id}`)
+
+export const signIn = (email: string, password: string) => request<{ user: StaffUser }>('/api/login', {
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
+})
+
+export const signOut = () => request('/api/logout', { method: 'POST' })
+
+export const saveRoom = (id: number, form: RoomForm) => request<Room>(`/api/rooms/${id}`, {
+  method: 'PUT',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({
+    floor: Number(form.floor),
+    side: form.side || null,
+    size_min_sqm: form.size_min_sqm,
+    size_max_sqm: form.size_max_sqm,
+    monthly_rent: form.monthly_rent,
+    amenities: form.amenities.split(',').map(value => value.trim()).filter(Boolean),
+    description: form.description || null,
+    status: form.status,
+  }),
+})
+
+export const uploadRoomPhoto = (id: number, file: File) => {
+  const data = new FormData()
+  data.append('photo', file)
+  return request(`/api/rooms/${id}/photos`, { method: 'POST', body: data })
+}
+
+export const setPhotoVisibility = (photo: Photo) => request(`/api/photos/${photo.id}/visibility`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ is_public: !photo.is_public }),
+})

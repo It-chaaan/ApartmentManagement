@@ -6,7 +6,7 @@ Guillermo Apartment is a web project for two apartment buildings and 18 rooms in
 
 The public site presents both buildings, their room layouts, sizes, monthly rents, shared amenities, and location. Visitors can browse rooms by building and use a Messenger inquiry link. A room is labeled available only when staff have set its status to available; other rooms invite visitors to ask for availability.
 
-The layout works without apartment photos. Photos uploaded by staff stay private until staff approve them for public display. Approved photos can appear in the site's feature area and gallery.
+The homepage includes five curated property photos: the exterior leads, followed by a finished studio, kitchenette detail, balcony walkway, and second floor corridor. Their building and room attribution has not been confirmed, so the gallery does not assign it. Photos uploaded by staff stay private until staff approve them for public display; approved room photos appear separately with their recorded room attribution.
 
 ## Staff dashboard
 
@@ -14,7 +14,7 @@ The private dashboard lets authorized staff sign in, view the two buildings, fil
 
 ## Current features and roadmap
 
-**Implemented:** public building and room sections, Messenger inquiries, staff sign-in, building views and room editing, room status tracking, private photo uploads, staff-controlled photo publishing, tenant profiles, occupancy history, and contract records with private signed-file versions. The initial property records contain two buildings and 18 rooms. Room occupancy begins unverified, and apartment photos have not been supplied.
+**Implemented:** public building and room sections, a curated property gallery, Messenger inquiries, staff sign-in, building views and room editing, room status tracking, private photo uploads, staff-controlled photo publishing, tenant profiles, occupancy history, and contract records with private signed-file versions. The initial property records contain two buildings and 18 rooms. Room occupancy begins unverified.
 
 **Later work:** monthly billing, online payments, refunds, deductions, a tenant portal, and inspection checklists. These workflows are not part of the current app.
 

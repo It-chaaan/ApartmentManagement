@@ -3,9 +3,9 @@
 ## Product and architecture
 
 - Guillermo Apartment is in Brgy. Lingunan, Valenzuela City. The repository has `frontend/` (React, Vite, TypeScript, Tailwind CSS) and `backend/` (Laravel). Local persistence uses the MySQL/MariaDB database provided by XAMPP. See the root `README.md` for setup commands and current API behavior.
-- Phase 1 already provides private family staff sign-in, building and room management, and private room photo uploads. The Vite dev server proxies `/api` to Laravel. Staff endpoints use Laravel sessions and CSRF protection; uploaded files are stored privately and served through an authenticated route.
+- Phase 1 provides private family staff sign-in, building and room management, and private room photo uploads. Phase 2 adds the public website at `/` and keeps the staff dashboard at `/staff`. The Vite dev server proxies `/api` to Laravel. Staff endpoints use Laravel sessions and CSRF protection; uploaded files are stored privately and served through an authenticated route.
 - Preserve `frontend/public/brand-mark.svg` and the existing Guillermo Apartment identity. Do not replace or redraw the logo without a request.
-- The public website and the staff dashboard serve different audiences. Public screens must use an explicit, reviewed set of publishable facts and assets; they must not reuse a management response or expose staff data, private photo URLs, or unverified room availability. Keep authentication and authorization on the server.
+- The public website and the staff dashboard serve different audiences. Public screens use an explicit, reviewed set of publishable facts and approved photos from `/api/public/site`; they must not reuse a management response or expose staff data, private photo URLs, or unverified room availability. Keep authentication and authorization on the server.
 
 ## Confirmed property data
 
@@ -20,7 +20,7 @@ Apartment photos are being compiled and will arrive later. Do not invent photos,
 
 ## Scope boundaries
 
-- Phase 1 is operational staff management. Public listings, tenants, contracts, billing, and inspections are later work; do not infer that a future phase is already authorized by this file.
+- Phases 1 and 2 cover operational staff management and the public apartment website. Tenants, contracts, billing, and inspections are later work; do not infer that a future phase is already authorized by this file.
 - Show Philippine peso values using `₱` and preserve decimal storage for rents. Describe 24–25 sqm as an approximate range, never an exact per-room measurement.
 - Preserve existing data and code. Read the applicable `AGENTS.md` files before backend changes. Project guidance here supplements `backend/AGENTS.md`; it does not replace its Laravel instructions.
 

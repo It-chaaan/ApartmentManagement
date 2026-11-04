@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ManagementController;
+use App\Http\Controllers\PublicSiteController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -9,6 +10,8 @@ Route::get('/', function () {
 });
 
 Route::prefix('api')->group(function () {
+    Route::get('/public/site', [PublicSiteController::class, 'site']);
+    Route::get('/public/photos/{photo}', [PublicSiteController::class, 'photo']);
     Route::get('/csrf', fn (Request $request) => response()->json(['token' => csrf_token()]));
     Route::post('/login', [ManagementController::class, 'login'])->middleware('throttle:5,1');
     Route::middleware('auth')->group(function () {
@@ -21,6 +24,7 @@ Route::prefix('api')->group(function () {
         Route::put('/rooms/{room}', [ManagementController::class, 'updateRoom']);
         Route::post('/rooms/{room}/photos', [ManagementController::class, 'uploadPhoto']);
         Route::get('/photos/{photo}', [ManagementController::class, 'photo']);
+        Route::patch('/photos/{photo}/visibility', [ManagementController::class, 'setPhotoVisibility']);
         Route::post('/staff', [ManagementController::class, 'createStaff']);
     });
 });

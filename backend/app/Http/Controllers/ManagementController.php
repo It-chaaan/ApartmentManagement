@@ -120,6 +120,22 @@ class ManagementController extends Controller
         return response()->file(Storage::disk('local')->path($photo->path), ['Content-Type' => Storage::disk('local')->mimeType($photo->path), 'Cache-Control' => 'private, no-store']);
     }
 
+    public function setPhotoVisibility(Request $request, RoomPhoto $photo): JsonResponse
+    {
+        $data = $request->validate(['is_public' => ['required', 'boolean']]);
+        if ($data['is_public'] && ! Storage::disk('local')->exists($photo->path)) {
+            return response()->json(['message' => 'The photo file is missing and cannot be published.'], 422);
+        }
+
+        $photo->update([
+            'is_public' => $data['is_public'],
+            'approved_by' => $data['is_public'] ? $request->user()->id : null,
+            'approved_at' => $data['is_public'] ? now() : null,
+        ]);
+
+        return response()->json($photo->fresh());
+    }
+
     public function createStaff(Request $request): JsonResponse
     {
         abort_unless($request->user()->role === 'owner', 403);

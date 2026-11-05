@@ -1,6 +1,6 @@
 export async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   const csrf = options.method && options.method !== 'GET'
-    ? await fetch('/api/csrf').then(response => response.json()) as { token: string }
+    ? await fetch('/api/csrf', { signal: options.signal }).then(response => response.json()) as { token: string }
     : null
   const headers = new Headers(options.headers)
   headers.set('Accept', 'application/json')

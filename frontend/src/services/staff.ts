@@ -1,13 +1,13 @@
 import { request } from '../api/client'
 import type { Building, Contract, Photo, Room, RoomForm, StaffUser, Tenant } from '../types/staff'
 
-export const getSession = () => request<{ user: StaffUser }>('/api/me')
+export const getSession = () => request<{ user: StaffUser }>('/api/me', { signal: AbortSignal.timeout(4000) })
 export const getBuildings = () => request<Building[]>('/api/buildings')
 export const getRooms = () => request<Room[]>('/api/rooms')
 export const getRoom = (id: number) => request<Room>(`/api/rooms/${id}`)
 
 export const signIn = (email: string, password: string) => request<{ user: StaffUser }>('/api/login', {
-  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }),
+  method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }), signal: AbortSignal.timeout(8000),
 })
 
 export const signOut = () => request('/api/logout', { method: 'POST' })

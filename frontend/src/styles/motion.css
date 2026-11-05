@@ -1,0 +1,32 @@
+@media (prefers-reduced-motion: no-preference) {
+  [data-motion] { transition: opacity .6s ease, transform .6s cubic-bezier(.2,.7,.2,1); }
+  [data-motion="pending"] { opacity: 0; transform: translateY(22px); }
+  [data-motion="visible"] { opacity: 1; transform: translateY(0); }
+  .building-row:nth-child(2), .room-card:nth-child(3n + 2), .gallery-grid figure:nth-child(2n) { transition-delay: 70ms; }
+  .room-card:nth-child(3n), .gallery-grid figure:nth-child(3n) { transition-delay: 130ms; }
+
+  .public-shell .building-row, .public-shell .room-card, .public-shell .gallery-open,
+  .staff-dashboard button, .staff-dashboard a, .staff-dashboard .field,
+  .staff-tenancy button { transition-property: opacity, transform, border-color, background-color, box-shadow; transition-duration: .22s; transition-timing-function: ease; }
+  .public-shell .building-row:hover, .public-shell .room-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgb(0 0 0 / 8%); }
+  .public-shell .gallery-open:hover img { transform: scale(1.035); }
+  .public-shell .gallery-open img { transition: transform .45s ease; }
+  .public-shell .room-tabs button:hover, .public-shell .hero-summary a:hover { transform: translateY(-2px); }
+  .public-shell .room-tabs button, .public-shell .hero-summary a { transition: transform .22s ease, background-color .22s ease, border-color .22s ease; }
+  .public-shell .gallery-dialog[open] { animation: motion-dialog .26s ease-out both; }
+  .public-shell .gallery-dialog[open]::backdrop { animation: motion-fade .26s ease-out both; }
+
+  .staff-dashboard button:not(:disabled):hover, .staff-dashboard a:hover { transform: translateY(-2px); box-shadow: 0 7px 18px rgb(11 31 58 / 10%); }
+  .staff-dashboard button:not(:disabled):active { transform: translateY(0); box-shadow: none; }
+  .staff-dashboard .field:focus { box-shadow: 0 0 0 3px rgb(49 93 135 / 13%); }
+  .staff-dashboard [role="alert"], .staff-dashboard [role="status"] { animation: motion-fade .3s ease-out both; }
+  .staff-dashboard > div.fixed, .staff-tenancy > div.fixed { animation: motion-fade .22s ease-out both; }
+  .staff-dashboard > div.fixed > section, .staff-tenancy > div.fixed > form { animation: motion-dialog .32s cubic-bezier(.2,.7,.2,1) both; }
+}
+
+@keyframes motion-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes motion-dialog { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+
+@media (prefers-reduced-motion: reduce) {
+  [data-motion] { opacity: 1 !important; transform: none !important; transition: none !important; }
+}

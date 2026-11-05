@@ -94,3 +94,22 @@
 .staff-auth-spinner { width: 14px; height: 14px; flex: 0 0 auto; border: 2px solid #d8d8d8; border-top-color: #111; border-radius: 50%; animation: staff-auth-spin .8s linear infinite; }
 @keyframes staff-auth-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .staff-auth-spinner { animation: none; border-color: #111; } }
+
+@media (prefers-reduced-motion: no-preference) {
+  .staff-auth-card { animation: staff-auth-enter .5s ease-out both; }
+  .staff-auth-eyebrow { animation: staff-auth-rise .5s .12s ease-out both; }
+  .staff-auth-content h1 { animation: staff-auth-rise .55s .18s ease-out both; }
+  .staff-auth-intro { animation: staff-auth-rise .55s .24s ease-out both; }
+  .staff-auth-form { animation: staff-auth-rise .55s .3s ease-out both; }
+  .staff-auth-note { animation: staff-auth-rise .55s .38s ease-out both; }
+  .staff-auth-visual img { animation: staff-auth-photo .75s .12s ease-out both; }
+  .staff-auth-photo-label { animation: staff-auth-rise .65s .45s ease-out both; }
+  .staff-auth-error, .staff-auth-status { animation: staff-auth-rise .25s ease-out both; }
+  .staff-auth-submit:not(:disabled):hover { transform: translateY(-2px); box-shadow: 0 9px 20px rgb(0 0 0 / 15%); }
+  .staff-auth-brand img { transition: transform .25s ease; }
+  .staff-auth-brand:hover img { transform: rotate(-7deg); }
+  .staff-auth-submit { transition: background .2s ease, transform .2s ease, box-shadow .2s ease; }
+}
+@keyframes staff-auth-enter { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes staff-auth-rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes staff-auth-photo { from { opacity: 0; transform: scale(1.04); } to { opacity: 1; transform: scale(1); } }

@@ -60,6 +60,45 @@ class StaffOperationsTest extends TestCase
         CarbonImmutable::setTestNow();
     }
 
+    public function test_partial_months_are_full_and_advance_covers_unpaid_final_month_only(): void
+    {
+        CarbonImmutable::setTestNow('2026-02-28');
+        $contract = $this->activeContract();
+        $active = $this->getJson('/api/staff/ledgers')->assertOk()->json((string) $contract->id);
+        $this->assertSame('5000.00', $active['installments'][0]['amount']);
+        $this->assertSame('5000.00', $active['installments'][1]['amount']);
+        $this->assertSame('0.00', $active['advance_applied']);
+        $this->postJson("/api/contracts/$contract->id/end", [
+            'ended_on' => '2026-02-15', 'end_review_note' => 'Move-out inspection complete',
+        ])->assertOk();
+        $ended = $this->getJson('/api/staff/ledgers')->assertOk()->json((string) $contract->id);
+        $this->assertCount(2, $ended['installments']);
+        $this->assertSame('5000.00', $ended['installments'][1]['amount']);
+        $this->assertSame('5000.00', $ended['installments'][1]['advance_applied']);
+        $this->assertSame('0.00', $ended['installments'][1]['balance']);
+        $this->assertSame('5000.00', $ended['due_balance']);
+        $this->assertSame('0.00', $ended['advance_remaining']);
+        $this->assertSame('5000.00', $ended['deposit_paid']);
+        CarbonImmutable::setTestNow();
+    }
+
+    public function test_paid_final_month_leaves_advance_unapplied(): void
+    {
+        CarbonImmutable::setTestNow('2026-02-28');
+        $contract = $this->activeContract();
+        $this->postJson("/api/contracts/$contract->id/payments", [
+            'submission_key' => (string) Str::uuid(), 'kind' => 'rent', 'period_month' => '2026-02',
+            'paid_on' => '2026-02-10', 'amount' => '5000', 'method' => 'cash',
+        ])->assertCreated();
+        $this->postJson("/api/contracts/$contract->id/end", [
+            'ended_on' => '2026-02-15', 'end_review_note' => 'Final rent already paid',
+        ])->assertOk();
+        $ended = $this->getJson('/api/staff/ledgers')->assertOk()->json((string) $contract->id);
+        $this->assertSame('0.00', $ended['advance_applied']);
+        $this->assertSame('5000.00', $ended['advance_remaining']);
+        $this->assertSame('0.00', $ended['installments'][1]['balance']);
+        CarbonImmutable::setTestNow();
+    }
     public function test_inspections_validate_all_areas_and_keep_photos_private(): void
     {
         Storage::fake('local');

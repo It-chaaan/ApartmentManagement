@@ -19,4 +19,5 @@ class Contract extends Model
     public function room(): BelongsTo { return $this->belongsTo(Room::class); }
     public function previousContract(): BelongsTo { return $this->belongsTo(self::class, 'previous_contract_id'); }
     public function files(): HasMany { return $this->hasMany(ContractFile::class)->orderBy('id'); }
+    public function payments(): HasMany { return $this->hasMany(ContractPayment::class)->with('recorder')->orderBy('id'); }
 }

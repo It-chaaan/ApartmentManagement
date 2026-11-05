@@ -3,6 +3,7 @@
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\TenancyController;
+use App\Http\Controllers\StaffOperationsController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -17,6 +18,13 @@ Route::prefix('api')->group(function () {
     Route::post('/login', [ManagementController::class, 'login'])->middleware('throttle:5,1');
     Route::middleware(['auth', 'staff.role'])->group(function () {
         Route::get('/me', [ManagementController::class, 'me']);
+        Route::get('/staff/dashboard', [StaffOperationsController::class, 'dashboard']);
+        Route::get('/staff/ledgers', [StaffOperationsController::class, 'ledgers']);
+        Route::post('/contracts/{contract}/payments', [StaffOperationsController::class, 'storePayment']);
+        Route::get('/rooms/{room}/inspections', [StaffOperationsController::class, 'inspections']);
+        Route::post('/rooms/{room}/inspections', [StaffOperationsController::class, 'storeInspection']);
+        Route::post('/inspections/{inspection}/photos', [StaffOperationsController::class, 'uploadInspectionPhoto']);
+        Route::get('/inspections/{inspection}/photos/{photo}', [StaffOperationsController::class, 'inspectionPhoto']);
         Route::post('/logout', [ManagementController::class, 'logout']);
         Route::get('/buildings', [ManagementController::class, 'buildings']);
         Route::put('/buildings/{building}', [ManagementController::class, 'updateBuilding']);

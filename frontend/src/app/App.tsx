@@ -1,9 +1,11 @@
 import { useEffect } from 'react'
 import PublicHomePage from '../pages/PublicHomePage'
 import StaffDashboardPage from '../pages/StaffDashboardPage'
+import { usePageMotion } from '../hooks/usePageMotion'
 
 function App() {
   const isStaff = window.location.pathname === '/staff' || window.location.pathname.startsWith('/staff/')
+  usePageMotion()
 
   useEffect(() => {
     document.title = isStaff ? 'Staff dashboard | Guillermo Apartment' : 'Guillermo Apartment | Rooms in Lingunan, Valenzuela City'

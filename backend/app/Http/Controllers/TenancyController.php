@@ -10,6 +10,7 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 
@@ -82,12 +83,20 @@ class TenancyController extends Controller
             'moved_in_on' => ['required', 'date_format:Y-m-d'],
             'advance_paid' => ['required', 'numeric', 'gte:0', 'max:99999999.99'],
             'deposit_paid' => ['required', 'numeric', 'gte:0', 'max:99999999.99'],
+            'signing_paid_on' => ['nullable', 'date_format:Y-m-d'],
+            'advance_method' => ['nullable', Rule::in(['cash', 'bank_transfer', 'gcash', 'other'])],
+            'deposit_method' => ['nullable', Rule::in(['cash', 'bank_transfer', 'gcash', 'other'])],
+            'signing_reference' => ['nullable', 'string', 'max:120'],
+            'signing_notes' => ['nullable', 'string', 'max:2000'],
         ]);
-        DB::transaction(function () use ($contract, $data) {
+        DB::transaction(function () use ($contract, $data, $request) {
             $room = Room::whereKey($contract->room_id)->lockForUpdate()->firstOrFail();
             $contract->refresh();
             if ($contract->status !== 'draft') {
                 throw ValidationException::withMessages(['status' => 'Only a draft contract can start a tenancy.']);
+            }
+            if ((float) $data['advance_paid'] > (float) $contract->advance_amount || (float) $data['deposit_paid'] > (float) $contract->deposit_amount) {
+                throw ValidationException::withMessages(['advance_paid' => 'Signing payments cannot exceed the agreed advance or deposit.']);
             }
             $active = Contract::where('active_room_id', $room->id)->lockForUpdate()->first();
             if ($active) {
@@ -100,7 +109,20 @@ class TenancyController extends Controller
             } elseif (! in_array($room->status, ['available', 'reserved'], true)) {
                 throw ValidationException::withMessages(['room_id' => 'Confirm the room as available or reserved before starting a tenancy.']);
             }
-            $contract->update($data + ['status' => 'active', 'active_room_id' => $room->id]);
+            $contract->update(array_intersect_key($data, array_flip(['moved_in_on', 'advance_paid', 'deposit_paid'])) + ['status' => 'active', 'active_room_id' => $room->id]);
+            foreach (['advance' => 'advance_paid', 'deposit' => 'deposit_paid'] as $kind => $field) {
+                if ((float) $data[$field] <= 0) {
+                    continue;
+                }
+                $contract->payments()->create([
+                    'recorded_by' => $request->user()->id, 'kind' => $kind,
+                    'paid_on' => $data['signing_paid_on'] ?? $data['moved_in_on'],
+                    'amount' => $data[$field], 'method' => $data[$kind.'_method'] ?? 'not_recorded',
+                    'reference' => $data['signing_reference'] ?? null,
+                    'notes' => $data['signing_notes'] ?? null,
+                    'submission_key' => (string) Str::uuid(),
+                ]);
+            }
             $room->update(['status' => 'occupied']);
         });
         return response()->json($contract->fresh()->load('tenant', 'room.building', 'files', 'previousContract'));

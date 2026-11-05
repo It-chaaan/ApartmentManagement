@@ -56,3 +56,10 @@ export type Contract = {
   moved_in_on: string | null; ended_on: string | null; end_review_note: string | null
   status: 'draft' | 'active' | 'ended' | 'renewed'
 }
+
+export type Installment = { period_month: string; due_on: string; amount: string; paid: string; balance: string; is_due: boolean }
+export type Payment = { id: number; kind: 'rent' | 'advance' | 'deposit'; period_month: string | null; paid_on: string; amount: string; method: string; reference: string | null; notes: string | null; recorder: { name: string } | null }
+export type Ledger = { contract_id: number; installments: Installment[]; due_balance: string; advance_paid: string; deposit_paid: string; payments: Payment[] }
+export type DashboardSummary = { room_count: number; statuses: Record<string, number>; active_tenancies: number; rent_due: number; upcoming: (Installment & { contract_id: number; tenant: string; room: string })[] }
+export type InspectionItem = { area: string; condition: 'good' | 'needs_repair' | 'not_checked'; notes: string | null }
+export type Inspection = { id: number; room_id: number; contract_id: number | null; type: 'move_in' | 'routine' | 'move_out'; inspected_on: string; notes: string | null; inspector: { name: string }; items: InspectionItem[]; photos: { id: number; original_name: string }[] }

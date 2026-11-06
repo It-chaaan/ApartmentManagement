@@ -10,7 +10,8 @@ class StaffRole
 {
     public function handle(Request $request, Closure $next): Response
     {
-        abort_unless(in_array($request->user()?->role, ['owner', 'staff'], true), 403);
+        abort_unless($request->user()?->is_active && in_array($request->user()?->role, ['owner', 'staff'], true), 403);
+
         return $next($request);
     }
 }

@@ -2,8 +2,10 @@
 
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\PublicSiteController;
-use App\Http\Controllers\TenancyController;
 use App\Http\Controllers\StaffOperationsController;
+use App\Http\Controllers\StaffUserController;
+use App\Http\Controllers\TenancyController;
+use App\Http\Controllers\UtilityBillController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -35,6 +37,13 @@ Route::prefix('api')->group(function () {
         Route::get('/photos/{photo}', [ManagementController::class, 'photo']);
         Route::patch('/photos/{photo}/visibility', [ManagementController::class, 'setPhotoVisibility']);
         Route::post('/staff', [ManagementController::class, 'createStaff']);
+        Route::get('/staff-users', [StaffUserController::class, 'index']);
+        Route::patch('/staff-users/{user}', [StaffUserController::class, 'update']);
+        Route::get('/utility-bills', [UtilityBillController::class, 'index']);
+        Route::post('/utility-bills', [UtilityBillController::class, 'store']);
+        Route::post('/utility-bills/{utilityBill}/payments', [UtilityBillController::class, 'recordPayment']);
+        Route::post('/utility-bills/{utilityBill}/file', [UtilityBillController::class, 'upload']);
+        Route::get('/utility-bills/{utilityBill}/file', [UtilityBillController::class, 'download']);
         Route::get('/tenants', [TenancyController::class, 'tenants']);
         Route::post('/tenants', [TenancyController::class, 'storeTenant']);
         Route::put('/tenants/{tenant}', [TenancyController::class, 'updateTenant']);

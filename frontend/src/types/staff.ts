@@ -28,7 +28,16 @@ export type Room = {
   photos: Photo[]
 }
 
-export type StaffUser = { name: string; email: string; role: string }
+export type StaffUser = { id: number; name: string; email: string; role: string }
+export type StaffAccount = { id: number; name: string; email: string; role: 'owner' | 'staff'; is_active: boolean; created_at: string }
+export type UtilityBillPayment = { id: number; paid_on: string; amount: string; method: string; reference: string | null; notes: string | null; recorder: { name: string } }
+export type UtilityBill = {
+  id: number; room_id: number; room: { code: string; building_id: number; building: { name: string } }
+  kind: 'electricity' | 'water'; period_month: string; due_on: string; amount: string
+  paid_amount: string; balance: string; status: 'paid' | 'partial' | 'overdue' | 'unpaid'
+  account_reference: string | null; delivered_on: string | null; notes: string | null
+  file_name: string | null; payments: UtilityBillPayment[]
+}
 
 export type RoomForm = {
   floor: string

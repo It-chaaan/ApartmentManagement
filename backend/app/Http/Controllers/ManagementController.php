@@ -18,7 +18,7 @@ class ManagementController extends Controller
     public function login(Request $request): JsonResponse
     {
         $credentials = $request->validate(['email' => ['required', 'email'], 'password' => ['required', 'string']]);
-        if (! Auth::attempt($credentials)) {
+        if (! Auth::attempt($credentials + ['is_active' => true])) {
             return response()->json(['message' => 'The email or password is incorrect.'], 422);
         }
         $request->session()->regenerate();

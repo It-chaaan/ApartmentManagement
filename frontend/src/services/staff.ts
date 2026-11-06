@@ -1,5 +1,5 @@
 import { request } from '../api/client'
-import type { Building, Contract, DashboardSummary, Inspection, Ledger, Photo, Room, RoomForm, StaffUser, Tenant } from '../types/staff'
+import type { Building, Contract, DashboardSummary, Inspection, Ledger, Photo, Room, RoomForm, StaffAccount, StaffUser, Tenant, UtilityBill } from '../types/staff'
 
 export const getSession = () => request<{ user: StaffUser }>('/api/me', { signal: AbortSignal.timeout(4000) })
 export const getBuildings = () => request<Building[]>('/api/buildings')
@@ -52,3 +52,10 @@ export const recordPayment = (contractId: number, values: object) => request(`/a
 export const getInspections = (roomId: number) => request<Inspection[]>(`/api/rooms/${roomId}/inspections`)
 export const createInspection = (roomId: number, values: object) => request<Inspection>(`/api/rooms/${roomId}/inspections`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const uploadInspectionPhoto = (id: number, file: File) => { const data = new FormData(); data.append('photo', file); return request(`/api/inspections/${id}/photos`, { method: 'POST', body: data }) }
+export const getUtilityBills = () => request<UtilityBill[]>('/api/utility-bills')
+export const createUtilityBill = (values: object) => request<UtilityBill>('/api/utility-bills', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const recordUtilityPayment = (billId: number, values: object) => request<UtilityBill>(`/api/utility-bills/${billId}/payments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const uploadUtilityBillFile = (billId: number, file: File) => { const data = new FormData(); data.append('file', file); return request<UtilityBill>(`/api/utility-bills/${billId}/file`, { method: 'POST', body: data }) }
+export const getStaffAccounts = () => request<StaffAccount[]>('/api/staff-users')
+export const createStaffAccount = (values: object) => request<{ user: StaffAccount }>('/api/staff', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const updateStaffAccount = (id: number, values: object) => request<StaffAccount>(`/api/staff-users/${id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })

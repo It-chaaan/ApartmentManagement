@@ -13,9 +13,14 @@ class RentLedger
         $start = CarbonImmutable::parse($contract->starts_on);
         $end = CarbonImmutable::parse($contract->ended_on ?: $contract->ends_on);
         $lastMonth = $end->startOfMonth();
+        $renewal = Contract::where('previous_contract_id', $contract->id)->whereIn('status', ['signed', 'active', 'renewed'])->first();
+        if ($renewal && $renewal->starts_on->startOfMonth()->lte($lastMonth)) {
+            $lastMonth = CarbonImmutable::parse($renewal->starts_on)->startOfMonth()->subMonth();
+        }
         $payments = $contract->payments;
         $rentByMonth = $payments->where('kind', 'rent')->groupBy(fn ($payment) => $payment->period_month->format('Y-m'));
-        $advancePaid = $payments->where('kind', 'advance')->sum(fn ($payment) => $this->cents($payment->amount));
+        $advancePaid = $payments->where('kind', 'advance')->sum(fn ($payment) => $this->cents($payment->amount))
+            - $payments->where('kind', 'advance_transfer_out')->sum(fn ($payment) => $this->cents($payment->amount));
         $advanceRemaining = $advancePaid;
         // Hold the advance during an active tenancy. On move-out it covers only unpaid final-month rent.
         $finalMonth = $contract->status === 'ended' ? $lastMonth->format('Y-m') : null;
@@ -50,11 +55,19 @@ class RentLedger
             'advance_paid' => $this->money($advancePaid),
             'advance_applied' => $this->money($advancePaid - $advanceRemaining),
             'advance_remaining' => $this->money($advanceRemaining),
-            'deposit_paid' => $this->money($payments->where('kind', 'deposit')->sum(fn ($payment) => $this->cents($payment->amount))),
+            'deposit_paid' => $this->money($payments->where('kind', 'deposit')->sum(fn ($payment) => $this->cents($payment->amount))
+                - $payments->where('kind', 'deposit_transfer_out')->sum(fn ($payment) => $this->cents($payment->amount))),
             'payments' => $payments->sortByDesc('id')->values(),
         ];
     }
 
-    private function cents(string $amount): int { return (int) round((float) $amount * 100); }
-    private function money(int $cents): string { return number_format($cents / 100, 2, '.', ''); }
+    private function cents(string $amount): int
+    {
+        return (int) round((float) $amount * 100);
+    }
+
+    private function money(int $cents): string
+    {
+        return number_format($cents / 100, 2, '.', '');
+    }
 }

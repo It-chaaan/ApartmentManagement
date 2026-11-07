@@ -56,14 +56,15 @@ export type Tenant = {
   contracts: Contract[]
 }
 
-export type ContractFile = { id: number; original_name: string; created_at: string }
+export type ContractFile = { id: number; original_name: string; kind: 'signed' | 'generated'; created_at: string }
 export type Contract = {
   id: number; tenant_id: number; room_id: number; previous_contract_id: number | null
   tenant: Tenant; room: Room; previous_contract?: Contract | null; files: ContractFile[]
   signed_on: string; starts_on: string; ends_on: string; monthly_rent: string; due_day: number
   advance_amount: string; deposit_amount: string; advance_paid: string | null; deposit_paid: string | null
+  signing_recorded_at: string | null; pdf_fields: Record<string, string> | null
   moved_in_on: string | null; ended_on: string | null; end_review_note: string | null
-  status: 'draft' | 'active' | 'ended' | 'renewed'
+  status: 'draft' | 'signed' | 'active' | 'ended' | 'renewed'
 }
 
 export type Installment = { period_month: string; due_on: string; amount: string; paid: string; advance_applied: string; balance: string; is_due: boolean }

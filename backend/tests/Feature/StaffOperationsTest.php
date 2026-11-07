@@ -29,11 +29,9 @@ class StaffOperationsTest extends TestCase
             'due_day' => 31, 'advance_amount' => '5000', 'deposit_amount' => '5000',
         ])->assertCreated()->json('id');
         $this->putJson('/api/rooms/'.$room->id, ['status' => 'available'])->assertOk();
-        $this->postJson("/api/contracts/$contract/move-in", [
-            'moved_in_on' => '2026-01-15', 'signing_paid_on' => '2026-01-10',
-            'advance_paid' => '5000', 'deposit_paid' => '5000',
-            'advance_method' => 'cash', 'deposit_method' => 'bank_transfer',
-        ])->assertOk();
+        $this->postJson("/api/contracts/$contract/sign", ['signed_on' => '2026-01-10', 'received_full_payment' => true, 'method' => 'cash'])->assertOk();
+        $this->postJson("/api/contracts/$contract/move-in", ['moved_in_on' => '2026-01-15'])->assertOk();
+
         return Contract::findOrFail($contract);
     }
 
@@ -42,18 +40,18 @@ class StaffOperationsTest extends TestCase
         CarbonImmutable::setTestNow('2026-02-28');
         $contract = $this->activeContract();
         $ledger = $this->getJson('/api/staff/ledgers')->assertOk()->json((string) $contract->id);
-        $this->assertSame('10000.00', $ledger['due_balance']);
+        $this->assertSame('5000.00', $ledger['due_balance']);
         $this->assertSame('5000.00', $ledger['advance_paid']);
         $this->assertSame('5000.00', $ledger['deposit_paid']);
         $this->assertSame('2026-02-28', $ledger['installments'][1]['due_on']);
         $key = (string) Str::uuid();
-        $payment = ['submission_key' => $key, 'kind' => 'rent', 'period_month' => '2026-01',
+        $payment = ['submission_key' => $key, 'kind' => 'rent', 'period_month' => '2026-02',
             'paid_on' => '2026-02-01', 'amount' => '2000', 'method' => 'gcash',
             'reference' => 'REF-1', 'notes' => 'Partial payment'];
         $this->postJson("/api/contracts/$contract->id/payments", $payment)->assertCreated();
         $this->postJson("/api/contracts/$contract->id/payments", $payment)->assertOk();
-        $this->assertSame(3, $contract->payments()->count());
-        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.due_balance', '8000.00');
+        $this->assertSame(4, $contract->payments()->count());
+        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.due_balance', '3000.00');
         $this->postJson("/api/contracts/$contract->id/payments", array_replace($payment, ['submission_key' => (string) Str::uuid(), 'amount' => '4000']))->assertUnprocessable();
         $this->postJson("/api/contracts/$contract->id/payments", array_replace($payment, ['submission_key' => (string) Str::uuid(), 'kind' => 'advance', 'period_month' => null]))->assertUnprocessable();
         $this->assertStringNotContainsString('Private Tenant', json_encode($this->getJson('/api/public/site')->assertOk()->json()));
@@ -76,7 +74,7 @@ class StaffOperationsTest extends TestCase
         $this->assertSame('5000.00', $ended['installments'][1]['amount']);
         $this->assertSame('5000.00', $ended['installments'][1]['advance_applied']);
         $this->assertSame('0.00', $ended['installments'][1]['balance']);
-        $this->assertSame('5000.00', $ended['due_balance']);
+        $this->assertSame('0.00', $ended['due_balance']);
         $this->assertSame('0.00', $ended['advance_remaining']);
         $this->assertSame('5000.00', $ended['deposit_paid']);
         CarbonImmutable::setTestNow();
@@ -99,6 +97,7 @@ class StaffOperationsTest extends TestCase
         $this->assertSame('0.00', $ended['installments'][1]['balance']);
         CarbonImmutable::setTestNow();
     }
+
     public function test_inspections_validate_all_areas_and_keep_photos_private(): void
     {
         Storage::fake('local');

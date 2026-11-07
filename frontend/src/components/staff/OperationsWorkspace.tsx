@@ -94,7 +94,7 @@ export default function OperationsWorkspace({ view, buildingId, rooms, roomId, s
     {notice && <p role="status" className="rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
     {view === 'dashboard' && <section id="dashboard" aria-label="Staff dashboard">
       <div className="flex flex-wrap items-end justify-between gap-2"><button type="button" onClick={() => { setLoading(true); reload().catch(e => setError((e as Error).message)).finally(() => setLoading(false)) }} className="min-h-11 rounded-lg border border-[#ddd] px-4 text-sm font-semibold">Refresh</button></div>
-      {displaySummary && <><div className="mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">{[
+      {displaySummary && <><div className="staff-summary mt-4 grid grid-cols-2 gap-3 lg:grid-cols-4">{[
         ['Rooms', displaySummary.room_count], ['Unverified', displaySummary.statuses.unverified ?? 0],
         ['Active tenancies', displaySummary.active_tenancies], ['Rent due', peso(String(displaySummary.rent_due))],
       ].map(([label, value]) => <div key={label} className="rounded-xl border border-[#ddd] bg-white p-4"><p className="text-sm text-[#595959]">{label}</p><strong className="mt-1 block text-2xl text-[#111]">{value}</strong></div>)}</div>

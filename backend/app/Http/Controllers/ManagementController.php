@@ -102,6 +102,9 @@ class ManagementController extends Controller
         if (isset($data['status']) && $data['status'] !== 'occupied' && Contract::where('active_room_id', $room->id)->exists()) {
             return response()->json(['message' => 'End the active tenancy before changing this room status.', 'errors' => ['status' => ['End the active tenancy before changing this room status.']]], 422);
         }
+        if (isset($data['status']) && $data['status'] !== 'reserved' && Contract::where('room_id', $room->id)->where('status', 'signed')->exists()) {
+            return response()->json(['message' => 'Record move-in before changing a signed room status.', 'errors' => ['status' => ['Record move-in before changing a signed room status.']]], 422);
+        }
         $room->update($data);
 
         return response()->json($room->load(['building', 'photos']));

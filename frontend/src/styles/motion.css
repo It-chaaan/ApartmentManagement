@@ -7,7 +7,7 @@
 
   .public-shell .building-row, .public-shell .room-card, .public-shell .gallery-open,
   .staff-dashboard button, .staff-dashboard a, .staff-dashboard .field,
-  .staff-tenancy button { transition-property: opacity, transform, border-color, background-color, box-shadow; transition-duration: .22s; transition-timing-function: ease; }
+  .staff-dashboard #building-switcher, .staff-tenancy button { transition-property: opacity, transform, border-color, background-color, box-shadow; transition-duration: .22s; transition-timing-function: ease; }
   .public-shell .building-row:hover, .public-shell .room-card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgb(0 0 0 / 8%); }
   .public-shell .gallery-open:hover img { transform: scale(1.035); }
   .public-shell .gallery-open img { transition: transform .45s ease; }
@@ -20,12 +20,29 @@
   .staff-dashboard button:not(:disabled):active { transform: translateY(0); box-shadow: none; }
   .staff-dashboard .field:focus { box-shadow: 0 0 0 3px rgb(49 93 135 / 13%); }
   .staff-dashboard [role="alert"], .staff-dashboard [role="status"] { animation: motion-fade .3s ease-out both; }
+  .staff-dashboard .staff-summary > div { animation: staff-card-enter .32s cubic-bezier(.2,.7,.2,1) both; }
+  .staff-dashboard .staff-summary > div:nth-child(2) { animation-delay: 45ms; }
+  .staff-dashboard .staff-summary > div:nth-child(3) { animation-delay: 90ms; }
+  .staff-dashboard .staff-summary > div:nth-child(4) { animation-delay: 135ms; }
+  .staff-dashboard #dashboard [role="img"] > div > div { animation: staff-bar-grow .45s cubic-bezier(.2,.7,.2,1) both; transform-origin: bottom; }
+  .staff-dashboard #dashboard [role="img"] > div:nth-child(2) > div { animation-delay: 45ms; }
+  .staff-dashboard #dashboard [role="img"] > div:nth-child(3) > div { animation-delay: 90ms; }
+  .staff-dashboard #dashboard [role="img"] > div:nth-child(4) > div { animation-delay: 135ms; }
+  .staff-dashboard #dashboard [role="img"] > div:nth-child(5) > div { animation-delay: 180ms; }
+  .staff-dashboard #dashboard [role="img"] > div:nth-child(6) > div { animation-delay: 225ms; }
   .staff-dashboard > div.fixed, .staff-tenancy > div.fixed { animation: motion-fade .22s ease-out both; }
   .staff-dashboard > div.fixed > section, .staff-tenancy > div.fixed > form { animation: motion-dialog .32s cubic-bezier(.2,.7,.2,1) both; }
+  @media (max-width: 1023px) {
+    .staff-menu-backdrop { animation: motion-fade .2s ease-out both; }
+    .staff-sidebar { animation: staff-menu-enter .25s cubic-bezier(.2,.7,.2,1) both; }
+  }
 }
 
 @keyframes motion-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes motion-dialog { from { opacity: 0; transform: translateY(18px) scale(.985); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes staff-card-enter { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes staff-menu-enter { from { transform: translateX(-16px); opacity: .8; } to { transform: translateX(0); opacity: 1; } }
+@keyframes staff-bar-grow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 
 @media (prefers-reduced-motion: reduce) {
   [data-motion] { opacity: 1 !important; transform: none !important; transition: none !important; }

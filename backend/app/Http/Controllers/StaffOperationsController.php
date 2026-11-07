@@ -35,6 +35,7 @@ class StaffOperationsController extends Controller
             }
         }
         usort($due, fn ($a, $b) => strcmp($a['due_on'], $b['due_on']));
+
         return response()->json([
             'room_count' => $rooms->count(),
             'statuses' => $rooms->countBy('status'),
@@ -68,10 +69,14 @@ class StaffOperationsController extends Controller
                 if ($existing->contract_id !== $contract->id || $existing->kind !== $data['kind'] || $existing->amount !== number_format((float) $data['amount'], 2, '.', '')) {
                     throw ValidationException::withMessages(['submission_key' => 'This submission key belongs to another payment.']);
                 }
+
                 return $existing;
             }
             if ($contract->status === 'draft') {
-                throw ValidationException::withMessages(['contract_id' => 'Start the tenancy before recording payments.']);
+                throw ValidationException::withMessages(['contract_id' => 'Record signing before adding ledger payments.']);
+            }
+            if ($contract->status === 'signed' && $data['kind'] !== 'rent') {
+                throw ValidationException::withMessages(['kind' => 'Signing has already recorded the advance and deposit. Renewal balances transfer at move-in.']);
             }
             $period = null;
             if ($data['kind'] === 'rent') {
@@ -94,6 +99,7 @@ class StaffOperationsController extends Controller
                     throw ValidationException::withMessages(['amount' => 'Payment exceeds the agreed '.$data['kind'].' amount.']);
                 }
             }
+
             return $contract->payments()->create([
                 'recorded_by' => $request->user()->id, 'kind' => $data['kind'],
                 'period_month' => $period?->toDateString(), 'paid_on' => $data['paid_on'],
@@ -102,6 +108,7 @@ class StaffOperationsController extends Controller
                 'submission_key' => $data['submission_key'],
             ]);
         });
+
         return response()->json($payment->load('recorder'), $payment->wasRecentlyCreated ? 201 : 200);
     }
 
@@ -135,8 +142,10 @@ class StaffOperationsController extends Controller
                 'inspected_on' => $data['inspected_on'], 'notes' => $data['notes'] ?? null,
             ]);
             $inspection->items()->createMany($data['items']);
+
             return $inspection;
         });
+
         return response()->json($inspection->load('items', 'photos', 'inspector'), 201);
     }
 
@@ -146,12 +155,14 @@ class StaffOperationsController extends Controller
         $file = $request->file('photo');
         $path = $file->store('inspections/'.$inspection->id, 'local');
         $photo = $inspection->photos()->create(['path' => $path, 'original_name' => $file->getClientOriginalName(), 'uploaded_by' => $request->user()->id]);
+
         return response()->json($photo, 201);
     }
 
     public function inspectionPhoto(RoomInspection $inspection, InspectionPhoto $photo)
     {
         abort_unless($photo->room_inspection_id === $inspection->id && Storage::disk('local')->exists($photo->path), 404);
+
         return Storage::disk('local')->response($photo->path, null, ['Cache-Control' => 'private, no-store', 'X-Content-Type-Options' => 'nosniff']);
     }
 }

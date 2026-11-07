@@ -12,17 +12,6 @@ const revealSelector = [
   '.public-shell .location-section',
   '.public-shell .contact-section',
   '.public-shell .public-footer',
-  '.staff-dashboard > header',
-  '.staff-dashboard > div > p:first-child',
-  '.staff-dashboard > div > h1',
-  '.staff-dashboard > div > nav',
-  '.staff-dashboard > div > section',
-  '.staff-dashboard > div > section article',
-  '.staff-dashboard #rooms button',
-  '.staff-dashboard .staff-tenancy > div:not(.fixed)',
-  '.staff-dashboard #overview',
-  '.staff-dashboard #payments',
-  '.staff-dashboard #inspections',
 ].join(', ')
 
 export function usePageMotion() {

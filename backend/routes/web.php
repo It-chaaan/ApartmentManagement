@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Controllers\ContractDocumentController;
+use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\StaffOperationsController;
@@ -49,6 +51,10 @@ Route::prefix('api')->group(function () {
         Route::put('/tenants/{tenant}', [TenancyController::class, 'updateTenant']);
         Route::get('/contracts', [TenancyController::class, 'contracts']);
         Route::post('/contracts', [TenancyController::class, 'storeContract']);
+        Route::post('/contracts/{contract}/sign', [ContractSigningController::class, 'store']);
+        Route::get('/contract-template', [ContractDocumentController::class, 'template']);
+        Route::post('/contract-template', [ContractDocumentController::class, 'uploadTemplate']);
+        Route::post('/contracts/{contract}/generate-pdf', [ContractDocumentController::class, 'generate']);
         Route::post('/contracts/{contract}/move-in', [TenancyController::class, 'moveIn']);
         Route::post('/contracts/{contract}/end', [TenancyController::class, 'end']);
         Route::post('/contracts/{contract}/files', [TenancyController::class, 'upload']);

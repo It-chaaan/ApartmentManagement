@@ -7,7 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class ContractFile extends Model
 {
-    protected $fillable = ['path', 'original_name', 'uploaded_by'];
+    protected $fillable = ['path', 'original_name', 'uploaded_by', 'kind'];
 
-    public function contract(): BelongsTo { return $this->belongsTo(Contract::class); }
+    public function contract(): BelongsTo
+    {
+        return $this->belongsTo(Contract::class);
+    }
 }

@@ -43,9 +43,13 @@ export const getTenants = () => request<Tenant[]>('/api/tenants')
 export const getContracts = () => request<Contract[]>('/api/contracts')
 export const saveTenant = (values: Record<string, string>, id?: number) => request<Tenant>(id ? `/api/tenants/${id}` : '/api/tenants', { method: id ? 'PUT' : 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const createContract = (values: object) => request<Contract>('/api/contracts', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const signContract = (id: number, values: object) => request<Contract>(`/api/contracts/${id}/sign`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const moveIn = (id: number, values: object) => request<Contract>(`/api/contracts/${id}/move-in`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const endTenancy = (id: number, values: object) => request<Contract>(`/api/contracts/${id}/end`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const uploadContract = (id: number, file: File) => { const data = new FormData(); data.append('file', file); return request(`/api/contracts/${id}/files`, { method: 'POST', body: data }) }
+export const getContractTemplate = () => request<{ id: number; original_name: string; created_at: string } | null>('/api/contract-template')
+export const uploadContractTemplate = (file: File) => { const data = new FormData(); data.append('file', file); return request<{ id: number; original_name: string; created_at: string }>('/api/contract-template', { method: 'POST', body: data }) }
+export const generateContractPdf = (id: number, values: object) => request<{ id: number; original_name: string; kind: 'generated' }>(`/api/contracts/${id}/generate-pdf`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const getDashboard = () => request<DashboardSummary>('/api/staff/dashboard')
 export const getLedgers = () => request<Record<string, Ledger>>('/api/staff/ledgers')
 export const recordPayment = (contractId: number, values: object) => request(`/api/contracts/${contractId}/payments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })

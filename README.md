@@ -1,36 +1,102 @@
 # Guillermo Apartment
 
-Guillermo Apartment is a web project for two apartment buildings and 18 rooms in Brgy. Lingunan, Valenzuela City. Visitors can explore the property and ask about rooms. Authorized family staff use a separate dashboard to keep building and room information current.
+Guillermo Apartment is a property website and staff management app for two buildings and 18 rooms in Brgy. Lingunan, Valenzuela City. Visitors can explore rooms and inquire through Messenger. Authorized family staff manage availability, tenancy records, rent, utilities, inspections, and property content in a private workspace.
 
-## Public website
+The public website is at `/`; the staff workspace is at `/staff`.
 
-The public site presents both buildings, their room layouts, sizes, monthly rents, shared amenities, and location. Visitors can browse rooms by building and use a Messenger inquiry link. A room is labeled available only when staff have set its status to available; other rooms invite visitors to ask for availability.
+## Features
 
-The homepage includes five curated property photos: the exterior leads, followed by a finished studio, kitchenette detail, balcony walkway, and second floor corridor. Their building and room attribution has not been confirmed, so the gallery does not assign it. Photos uploaded by staff stay private until staff approve them for public display; approved room photos appear separately with their recorded room attribution.
-
-## Staff dashboard
-
-The private staff workspace uses one set of pages for both buildings. Staff can switch between an all-buildings view and either building; rooms, contracts, payments, bills, checklists, and dashboard figures follow that selection, while tenant profiles remain reusable. The six pages are Dashboard, Rooms, Tenants & Contracts, Payments & Bills, Checklists, and owner-only User Management. The Dashboard shows current counts and a six-month trend of recorded rent collections. Payments & Bills separates rent from manually recorded electricity and water bills. Utility bill PDFs and payment records remain private. The workspace is at `/staff`; the public homepage is at `/`.
-
-## Current features and roadmap
-
-**Implemented:** public building and room sections, a curated property gallery, Messenger inquiries, staff sign-in, building views and room editing, room status tracking, private photo uploads, staff-controlled photo publishing, tenant profiles, occupancy history, contract records with private signed-file versions, manual rent payments, utility bills and partial payment history, private inspection checklists and photos, and owner-controlled staff accounts. The initial property records contain two buildings and 18 rooms. Room occupancy begins unverified.
-
-**Rent rules:** A partial first or last month is charged at the full monthly amount. The advance stays separate from rent while a tenancy is active. When it ends, the ledger applies available advance only to unpaid final-month rent and shows any unused advance separately. The deposit is never used for rent automatically. Refunds and other settlement decisions remain staff actions outside the current ledger.
-
-**Later work:** online payments, utility email ingestion, automatic meter-based charges, refunds, deductions, and a tenant portal. These workflows are not part of the current app.
-
-## Project structure and technology
-
-| Directory | Purpose |
+| Area | What it does |
 | --- | --- |
-| `frontend/` | React and TypeScript interface built with Vite and styled with Tailwind CSS |
-| `backend/` | Laravel API, authentication, validation, database models, migrations, and tests |
+| Public website | Shows both buildings, room details, amenities, a curated property gallery, and a Messenger inquiry link. A room appears available only after staff mark it available. |
+| Rooms and photos | Lets staff edit building and room information, track room status, upload private photos, and approve individual room photos for public display. |
+| Tenancies and contracts | Keeps tenant profiles, occupancy history, contract terms, renewals, signing payments, and private versions of signed contract PDFs. |
+| Payments and utilities | Records rent payments and manually entered electricity and water bills, including partial utility payments and private bill PDFs. |
+| Inspections | Stores private room checklists and inspection photos. |
+| Staff access | Uses staff sessions for management actions. Owners can manage staff accounts and disable access. |
 
-The frontend uses Laravel's API for property data and staff actions. Laravel stores building, room, and photo records in a MySQL-compatible database; local development uses the database provided by XAMPP. The public API returns a limited set of website information, while management actions require a staff session.
+The dashboard can show all buildings or filter records to one building. The initial seeder creates two buildings and 18 rooms with **unverified** room status; staff must verify availability before advertising a room as available.
 
-## Security and development status
+## Tech stack and repository layout
 
-Staff authentication protects management data. Owners alone can create, edit, or disable staff accounts; disabled accounts cannot sign in or use an existing staff session. Photos are stored privately by default, and public access requires a separate approval. Signed contracts and utility bill PDFs require a staff session. Inputs and uploads are validated. Credentials and local environment files are excluded from Git.
+| Path | Technology and responsibility |
+| --- | --- |
+| [`frontend/`](frontend/) | React, TypeScript, Vite, and Tailwind CSS for the public site and staff workspace. |
+| [`backend/`](backend/) | Laravel 13, PHP, session-protected routes, models, migrations, seeders, and PHPUnit tests. |
 
-The current app covers the public website and private staff operations for rooms, tenants, contracts, rent, utilities, inspections, and staff accounts. The public website continues to show only approved photos and verified availability. Signed contracts, utility bills, and tenant records remain private.
+The frontend calls Laravel through `/api`. During local development, Vite proxies those requests to `http://127.0.0.1:8000`. Laravel's default `.env.example` uses SQLite; MySQL is also supported through Laravel's database configuration.
+
+## Getting started
+
+### Prerequisites
+
+- PHP 8.3 or newer, with the extensions required by Laravel and the selected database driver
+- Composer
+- Node.js and npm compatible with the versions in the lockfiles
+- SQLite, or a running MySQL-compatible database if you choose MySQL
+
+Run these commands from the repository root in PowerShell. Keep the backend and frontend servers in separate terminals.
+
+### 1. Configure and initialize the backend
+
+```powershell
+cd backend
+composer install
+if (-not (Test-Path .env)) { Copy-Item .env.example .env }
+if (-not (Test-Path database/database.sqlite)) { New-Item database/database.sqlite -ItemType File }
+php artisan key:generate
+php artisan migrate --seed
+php artisan staff:create-owner
+```
+
+`staff:create-owner` interactively asks for a name, email, and password of at least 12 characters. It creates the first owner account only if one does not already exist. The seeder adds property data; it does not create a default login.
+
+For MySQL instead of SQLite, create an empty database and update `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` in `backend/.env` before running migrations. Keep `backend/.env` and all credentials out of Git.
+
+Start Laravel:
+
+```powershell
+php artisan serve --host=127.0.0.1 --port=8000
+```
+
+### 2. Install and start the frontend
+
+In a second terminal, from the repository root:
+
+```powershell
+cd frontend
+npm ci
+npm run dev
+```
+
+Open the local URL printed by Vite (normally `http://localhost:5173/`). Visit `/staff` at that same origin and sign in with the owner account. Start with the staff dashboard to verify room statuses and update property information. The Laravel server on port 8000 provides the API; the Vite URL serves the React interface during development.
+
+## Everyday commands
+
+| Directory | Command | Purpose |
+| --- | --- | --- |
+| `frontend/` | `npm run dev` | Start the Vite development server. |
+| `frontend/` | `npm run build` | Type-check and build the frontend. |
+| `frontend/` | `npm run lint` | Run ESLint. |
+| `backend/` | `php artisan test` | Run the backend test suite. |
+| `backend/` | `php artisan migrate` | Apply new database migrations. |
+
+## How the app handles data
+
+The public API provides only website information and approved photos. Staff routes use session authentication. Contract PDFs, utility bill PDFs, inspection photos, and tenant records stay behind staff access. Room photos uploaded by staff remain private until explicitly approved for the public site.
+
+The rent ledger charges a full monthly amount for a partial first or last month. Advance payment stays separate while a tenancy is active; at tenancy end, available advance applies only to unpaid final-month rent, with unused advance shown separately. Deposit is never applied to rent automatically. Staff handle refunds and other settlement decisions outside the current ledger.
+
+The five curated homepage property photos have not been confirmed as belonging to a particular building or room, so the gallery does not assign that attribution. Approved room photos appear separately with their recorded room attribution.
+
+## Current scope
+
+The app currently supports public browsing and private staff workflows for rooms, tenants, contracts, payments, utilities, inspections, and accounts. Online payments, utility email ingestion, automatic meter-based charges, refunds and deductions, and a tenant portal are planned work rather than available features.
+
+## Contributing and further documentation
+
+For changes, follow the repository's [`AGENTS.md`](AGENTS.md) and the backend's [`backend/AGENTS.md`](backend/AGENTS.md) when working on Laravel. Run the relevant lint, build, or test command before submitting a change. The [`frontend/README.md`](frontend/README.md) describes the interface source layout; [`backend/README.md`](backend/README.md) has additional API and tenancy notes.
+
+## License
+
+No license for the overall repository is included. The `backend/composer.json` license field comes from the Laravel project scaffold and should not be taken as a license grant for this entire application.

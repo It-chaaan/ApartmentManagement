@@ -1,10 +1,9 @@
-# Local agent guidance is intentionally not distributed with the project.
-/.agents/
-/.agens/
+# Local Codex guidance is intentionally not distributed with the project.
+/.codex/
 /AGENTS.md
 /agents.md
+**/.codex/
 **/.agents/
-**/.agens/
 **/AGENTS.md
 **/agents.md
 

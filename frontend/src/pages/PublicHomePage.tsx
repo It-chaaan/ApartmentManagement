@@ -8,8 +8,8 @@ import { buildingRent, buildingSize } from '../utils/property'
 import '../styles/public.css'
 
 const messenger = 'https://www.facebook.com/christian.guillermo.146'
-const address = '667 T. Santiago, Lingunan, Valenzuela, Metro Manila'
-const mapQuery = encodeURIComponent(address)
+const address = 'T. Santiago, Brgy. Lingunan, Valenzuela City'
+const mapQuery = encodeURIComponent('Brgy. Lingunan, Valenzuela City')
 const mapUrl = `https://www.google.com/maps?q=${mapQuery}&output=embed`
 const mapLink = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`
 function PublicHomePage() {
@@ -70,7 +70,7 @@ function PublicHomePage() {
 
         <section className="public-section gallery-section" id="gallery" aria-labelledby="gallery-heading"><div className="gallery-intro"><div><span className="section-number">04 / THE SPACE</span><h2 id="gallery-heading">See the place<br/><em>for yourself.</em></h2></div><p>A look at the property and its spaces. These photos do not indicate which rooms are currently available.</p></div><CuratedGallery/>{approvedRoomPhotos.length > 0 && <div className="approved-room-gallery"><h3>More room photos</h3><p>Published by staff with room attribution.</p><div className="gallery-grid">{approvedRoomPhotos.map(photo => <figure key={photo.url}><img src={photo.url} alt={`Approved photo of ${photo.building}, room ${photo.room}`} loading="lazy" decoding="async"/><figcaption>{photo.building} · Room {photo.room}</figcaption></figure>)}</div></div>}</section>
 
-        <section className="location-section" id="location" aria-labelledby="location-heading"><div className="location-copy"><span className="section-number">05 / FIND US</span><h2 id="location-heading">Come see where<br/><em>we are.</em></h2><p className="location-label">Guillermo Apartment</p><address>{address}</address><p>Use the map for the area, and message us to arrange a visit or confirm directions.</p><a href={mapLink} target="_blank" rel="noopener noreferrer" className="location-button">Open in Google Maps <span aria-hidden="true">↗</span></a></div><div className="map-frame"><iframe title={`Map search for ${address}`} src={mapUrl} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen /><span>Map search · {address}</span></div></section>
+        <section className="location-section" id="location" aria-labelledby="location-heading"><div className="location-copy"><span className="section-number">05 / FIND US</span><h2 id="location-heading">Come see where<br/><em>we are.</em></h2><p className="location-label">Guillermo Apartment</p><address>{address}</address><p>The map shows the neighborhood. Message us for the exact location and to arrange a visit.</p><a href={mapLink} target="_blank" rel="noopener noreferrer" className="location-button">View neighborhood map <span aria-hidden="true">↗</span></a></div><div className="map-frame"><iframe title="Map of Brgy. Lingunan, Valenzuela City neighborhood" src={mapUrl} loading="lazy" referrerPolicy="no-referrer-when-downgrade" allowFullScreen /><span>Neighborhood map · exact pin available on request</span></div></section>
         <section className="contact-section" id="contact" aria-labelledby="contact-heading"><div><span className="section-number">06 / GET IN TOUCH</span><h2 id="contact-heading">Have a room in mind?</h2><p>Ask about current availability or arrange a visit. We’ll help you find the right building and room.</p></div><a href={messenger} target="_blank" rel="noopener noreferrer" className="contact-button">Message us on Messenger <span aria-hidden="true">↗</span></a></section>
       </main>
 

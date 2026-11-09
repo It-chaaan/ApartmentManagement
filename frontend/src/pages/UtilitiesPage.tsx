@@ -18,7 +18,7 @@ export default function UtilitiesPage({ rooms }: { rooms: Room[] }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const visible = useMemo(() => bills.filter(b => rooms.some(r => r.id === b.room_id)), [bills, rooms])
-  const selected = visible.find(b => b.id === selectedId) ?? null
+  const selected = visible.find(b => b.id === selectedId) ?? visible[0] ?? null
 
   useEffect(() => {
     api.getUtilityBills().then(setBills).catch(e => setError((e as Error).message)).finally(() => setLoading(false))

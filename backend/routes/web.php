@@ -11,10 +11,6 @@ use App\Http\Controllers\UtilityBillController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
-Route::get('/', function () {
-    return view('welcome');
-});
-
 Route::prefix('api')->group(function () {
     Route::get('/public/site', [PublicSiteController::class, 'site']);
     Route::get('/public/photos/{photo}', [PublicSiteController::class, 'photo']);

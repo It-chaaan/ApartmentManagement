@@ -22,7 +22,10 @@ function App() {
     }
   }, [isStaff])
 
-  return isStaff ? <StaffDashboardPage /> : <PublicHomePage />
+  return <>
+    {import.meta.env.VITE_DEMO_MODE === '1' && <div role="note" aria-label="Demo mode" className="bg-[#0B1F3A] px-4 py-2 text-center text-sm font-semibold text-white">DEMO MODE · Sample records and availability only</div>}
+    {isStaff ? <StaffDashboardPage /> : <PublicHomePage />}
+  </>
 }
 
 export default App

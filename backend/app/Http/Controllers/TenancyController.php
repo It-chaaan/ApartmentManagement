@@ -68,6 +68,9 @@ class TenancyController extends Controller
         if ((int) round((float) $data['advance_amount'] * 100) !== (int) round((float) $data['monthly_rent'] * 100) || (int) round((float) $data['deposit_amount'] * 100) !== (int) round((float) $data['monthly_rent'] * 100)) {
             throw ValidationException::withMessages(['advance_amount' => 'The advance and deposit must each equal one month of rent.']);
         }
+        if ($data['signed_on'] > $data['ends_on']) {
+            throw ValidationException::withMessages(['signed_on' => 'Signing cannot be after the contract ends.']);
+        }
         if (isset($data['previous_contract_id'])) {
             $previous = Contract::findOrFail($data['previous_contract_id']);
             if ($previous->tenant_id !== (int) $data['tenant_id'] || $previous->room_id !== (int) $data['room_id'] || $previous->status === 'draft') {
@@ -99,8 +102,11 @@ class TenancyController extends Controller
             if ($data['moved_in_on'] < $contract->signed_on->format('Y-m-d')) {
                 throw ValidationException::withMessages(['moved_in_on' => 'Move-in cannot precede signing.']);
             }
+            if ($data['moved_in_on'] < $contract->starts_on->format('Y-m-d') || $data['moved_in_on'] > $contract->ends_on->format('Y-m-d')) {
+                throw ValidationException::withMessages(['moved_in_on' => 'Move-in must be within the contract term.']);
+            }
             $firstMonth = $contract->starts_on->startOfMonth()->toDateString();
-            $paidRent = $contract->payments()->where('kind', 'rent')->whereDate('period_month', $firstMonth)->sum('amount');
+            $paidRent = $contract->payments()->whereNull('voided_at')->where('kind', 'rent')->whereDate('period_month', $firstMonth)->sum('amount');
             if ((int) round((float) $paidRent * 100) < (int) round((float) $contract->monthly_rent * 100)) {
                 throw ValidationException::withMessages(['payments' => 'First-month rent must be paid at signing.']);
             }
@@ -135,7 +141,7 @@ class TenancyController extends Controller
                 throw ValidationException::withMessages(['room_id' => 'Confirm the room as available or reserved before starting a tenancy.']);
             }
             foreach (['advance' => 'advance_amount', 'deposit' => 'deposit_amount'] as $kind => $field) {
-                $paid = $contract->payments()->where('kind', $kind)->sum('amount');
+                $paid = $contract->payments()->whereNull('voided_at')->where('kind', $kind)->sum('amount');
                 if ((int) round((float) $paid * 100) !== (int) round((float) $contract->$field * 100)) {
                     throw ValidationException::withMessages(['payments' => 'The full advance and deposit must be accounted for before move-in.']);
                 }
@@ -155,6 +161,9 @@ class TenancyController extends Controller
             $contract->refresh();
             if ($contract->status !== 'active') {
                 throw ValidationException::withMessages(['status' => 'Only an active tenancy can be ended.']);
+            }
+            if ($data['ended_on'] < $contract->moved_in_on->format('Y-m-d')) {
+                throw ValidationException::withMessages(['ended_on' => 'End date cannot precede move-in.']);
             }
             $contract->update($data + ['status' => 'ended', 'active_room_id' => null]);
             $room->update(['status' => 'unverified']);

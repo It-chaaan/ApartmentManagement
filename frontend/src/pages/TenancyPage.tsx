@@ -24,6 +24,7 @@ export default function TenancyPage({ rooms, buildingId, focusContractId, onOpen
   const [view, setView] = useState<'tenants' | 'contracts' | 'history'>(focusContractId ? 'contracts' : 'tenants')
   const [showTenantForm, setShowTenantForm] = useState(false)
   const [showContractForm, setShowContractForm] = useState(false)
+  const [query, setQuery] = useState('')
   const load = async () => {
     try { const [t, c] = await Promise.all([api.getTenants(), api.getContracts()]); setTenants(t); setContracts(c); setError('') }
     catch (e) { setError((e as Error).message) } finally { setLoading(false) }
@@ -34,11 +35,12 @@ export default function TenancyPage({ rooms, buildingId, focusContractId, onOpen
       .catch(e => setError((e as Error).message))
       .finally(() => setLoading(false))
   }, [])
-  const visibleContracts = useMemo(() => contracts.filter(c => rooms.some(r => r.id === c.room_id)), [contracts, rooms])
-  const visibleTenants = useMemo(() => buildingId === 'all' ? tenants : tenants.filter(t => !t.contracts.length || visibleContracts.some(c => c.tenant_id === t.id)), [tenants, visibleContracts, buildingId])
+  const scopedContracts = useMemo(() => contracts.filter(c => rooms.some(r => r.id === c.room_id)), [contracts, rooms])
+  const visibleContracts = useMemo(() => scopedContracts.filter(c => `${c.id} ${c.tenant.full_name} ${c.room.building.name} ${c.room.code} ${c.status}`.toLowerCase().includes(query.trim().toLowerCase())), [scopedContracts, query])
+  const visibleTenants = useMemo(() => (buildingId === 'all' ? tenants : tenants.filter(t => !t.contracts.length || scopedContracts.some(c => c.tenant_id === t.id))).filter(t => `${t.full_name} ${t.phone ?? ''} ${t.email ?? ''}`.toLowerCase().includes(query.trim().toLowerCase())), [tenants, scopedContracts, buildingId, query])
   const tenant = visibleTenants.find(t => t.id === selectedTenant) ?? visibleTenants[0]
   const contract = visibleContracts.find(c => c.id === selectedContract) ?? visibleContracts[0]
-  const tenantContracts = useMemo(() => visibleContracts.filter(c => c.tenant_id === tenant?.id), [visibleContracts, tenant?.id])
+  const tenantContracts = useMemo(() => scopedContracts.filter(c => c.tenant_id === tenant?.id), [scopedContracts, tenant?.id])
   const pastContracts = useMemo(() => visibleContracts.filter(c => c.status === 'ended' || c.status === 'renewed'), [visibleContracts])
   const run = async (action: () => Promise<unknown>, success: string) => {
     setBusy(true); setError(''); setNotice('')
@@ -75,6 +77,7 @@ export default function TenancyPage({ rooms, buildingId, focusContractId, onOpen
       <div className="p-4 sm:p-5">
         {error && <p role="alert" className="mb-4 rounded-lg bg-red-50 p-3 text-sm text-red-700">{error}</p>}
         {notice && <p role="status" className="mb-4 rounded-lg bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
+        <label className="mb-4 block max-w-xl text-sm font-semibold">Find {view === 'tenants' ? 'tenant' : 'contract'}<input type="search" className="field" value={query} onChange={event => setQuery(event.target.value)} placeholder={view === 'tenants' ? 'Name, phone, or email' : 'Tenant, room, status, or contract number'} /></label>
         {loading ? <p role="status" className="py-8 text-sm text-[#595959]">Loading private records…</p> : <>
           {view === 'tenants' && <div className="grid gap-4 lg:grid-cols-[minmax(260px,.8fr)_minmax(0,1.2fr)]">
             <div className="min-w-0 space-y-2" aria-label="Tenant list">

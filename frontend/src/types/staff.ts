@@ -30,13 +30,14 @@ export type Room = {
 
 export type StaffUser = { id: number; name: string; email: string; role: string }
 export type StaffAccount = { id: number; name: string; email: string; role: 'owner' | 'staff'; is_active: boolean; created_at: string }
-export type UtilityBillPayment = { id: number; paid_on: string; amount: string; method: string; reference: string | null; notes: string | null; recorder: { name: string } }
+export type UtilityBillPayment = { id: number; paid_on: string; amount: string; method: string; reference: string | null; notes: string | null; recorder: { name: string }; voided_at: string | null; void_reason: string | null; voider: { name: string } | null }
+export type UtilityBillRefund = { id: number; amount: string; refunded_on: string; method: string; reference: string | null; reason: string; approver: { name: string }; voided_at: string | null; void_reason: string | null; voider: { name: string } | null }
 export type UtilityBill = {
   id: number; room_id: number; room: { code: string; building_id: number; building: { name: string } }
   kind: 'electricity' | 'water'; period_month: string; due_on: string; amount: string
-  paid_amount: string; balance: string; status: 'paid' | 'partial' | 'overdue' | 'unpaid'
+  paid_amount: string; balance: string; credit_available: string; refunded_amount: string; status: 'paid' | 'partial' | 'overdue' | 'unpaid' | 'overpaid'
   account_reference: string | null; delivered_on: string | null; notes: string | null
-  file_name: string | null; payments: UtilityBillPayment[]
+  file_name: string | null; payments: UtilityBillPayment[]; refunds: UtilityBillRefund[]
 }
 
 export type RoomForm = {
@@ -68,8 +69,9 @@ export type Contract = {
 }
 
 export type Installment = { period_month: string; due_on: string; amount: string; paid: string; advance_applied: string; balance: string; is_due: boolean }
-export type Payment = { id: number; kind: 'rent' | 'advance' | 'deposit'; period_month: string | null; paid_on: string; amount: string; method: string; reference: string | null; notes: string | null; recorder: { name: string } | null }
-export type Ledger = { contract_id: number; installments: Installment[]; due_balance: string; advance_paid: string; advance_applied: string; advance_remaining: string; deposit_paid: string; payments: Payment[] }
-export type DashboardSummary = { room_count: number; statuses: Record<string, number>; active_tenancies: number; rent_due: number; upcoming: (Installment & { contract_id: number; tenant: string; room: string })[] }
+export type Payment = { id: number; kind: 'rent' | 'advance' | 'deposit' | 'rent_transfer_out' | 'advance_transfer_out' | 'deposit_transfer_out'; period_month: string | null; paid_on: string; amount: string; method: string; reference: string | null; notes: string | null; recorder: { name: string } | null; voided_at: string | null; void_reason: string | null; voider?: { name: string } | null }
+export type ContractAdjustment = { id: number; kind: 'rent_refund' | 'advance_refund' | 'deposit_refund' | 'deposit_deduction'; amount: string; occurred_on: string; method: string | null; reference: string | null; reason: string; inspection_id: number | null; approver: { name: string }; voided_at: string | null; void_reason: string | null; voider: { name: string } | null }
+export type Ledger = { contract_id: number; installments: Installment[]; due_balance: string; advance_paid: string; advance_applied: string; advance_remaining: string; deposit_paid: string; rent_credit: string; advance_refundable: string; deposit_refundable: string; deposit_deducted: string; payments: Payment[]; adjustments: ContractAdjustment[] }
+export type DashboardSummary = { room_count: number; statuses: Record<string, number>; active_tenancies: number; rent_due: number; upcoming: (Installment & { contract_id: number; tenant: string; room: string })[]; expiring_contracts: { contract_id: number; tenant: string; room: string; ends_on: string }[]; repair_checklists: { room_id: number; room: string; inspected_on: string; areas: string[] }[]; unverified_rooms: { room_id: number; room: string }[] }
 export type InspectionItem = { area: string; condition: 'good' | 'needs_repair' | 'not_checked'; notes: string | null }
 export type Inspection = { id: number; room_id: number; contract_id: number | null; type: 'move_in' | 'routine' | 'move_out'; inspected_on: string; notes: string | null; inspector: { name: string }; items: InspectionItem[]; photos: { id: number; original_name: string }[] }

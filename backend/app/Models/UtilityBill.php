@@ -26,4 +26,9 @@ class UtilityBill extends Model
     {
         return $this->hasMany(UtilityBillPayment::class);
     }
+
+    public function refunds(): HasMany
+    {
+        return $this->hasMany(UtilityBillRefund::class)->with('approver', 'voider')->orderBy('id');
+    }
 }

@@ -52,7 +52,8 @@ class StaffOperationsTest extends TestCase
         $this->postJson("/api/contracts/$contract->id/payments", $payment)->assertOk();
         $this->assertSame(4, $contract->payments()->count());
         $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.due_balance', '3000.00');
-        $this->postJson("/api/contracts/$contract->id/payments", array_replace($payment, ['submission_key' => (string) Str::uuid(), 'amount' => '4000']))->assertUnprocessable();
+        $this->postJson("/api/contracts/$contract->id/payments", array_replace($payment, ['submission_key' => (string) Str::uuid(), 'amount' => '4000']))->assertCreated();
+        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.rent_credit', '1000.00');
         $this->postJson("/api/contracts/$contract->id/payments", array_replace($payment, ['submission_key' => (string) Str::uuid(), 'kind' => 'advance', 'period_month' => null]))->assertUnprocessable();
         $this->assertStringNotContainsString('Private Tenant', json_encode($this->getJson('/api/public/site')->assertOk()->json()));
         CarbonImmutable::setTestNow();
@@ -96,6 +97,104 @@ class StaffOperationsTest extends TestCase
         $this->assertSame('5000.00', $ended['advance_remaining']);
         $this->assertSame('0.00', $ended['installments'][1]['balance']);
         CarbonImmutable::setTestNow();
+    }
+
+    public function test_staff_can_void_later_rent_with_a_reason_without_erasing_history(): void
+    {
+        CarbonImmutable::setTestNow('2026-02-28');
+        $contract = $this->activeContract();
+        $payload = ['submission_key' => (string) Str::uuid(), 'kind' => 'rent', 'period_month' => '2026-02',
+            'paid_on' => '2026-02-10', 'amount' => '2000.00', 'method' => 'cash'];
+        $payment = $this->postJson("/api/contracts/$contract->id/payments", $payload)->assertCreated()->json();
+        $url = "/api/contracts/$contract->id/payments/{$payment['id']}/void";
+        $this->postJson($url, ['reason' => ''])->assertUnprocessable();
+        $this->postJson($url, ['reason' => 'Entered against the wrong month'])->assertOk();
+        $this->postJson($url, ['reason' => 'Again'])->assertUnprocessable();
+        $this->postJson("/api/contracts/$contract->id/payments", $payload)->assertUnprocessable()->assertJsonValidationErrors('submission_key');
+        $this->getJson('/api/staff/ledgers')->assertOk()
+            ->assertJsonPath($contract->id.'.due_balance', '5000.00')
+            ->assertJsonPath($contract->id.'.payments.0.void_reason', 'Entered against the wrong month');
+        $signingPayment = $contract->payments()->where('kind', 'rent')->firstOrFail();
+        $this->postJson("/api/contracts/$contract->id/payments/$signingPayment->id/void", ['reason' => 'Mistake'])->assertUnprocessable();
+        auth()->logout();
+        $this->postJson($url, ['reason' => 'Guest'])->assertUnauthorized();
+        CarbonImmutable::setTestNow();
+    }
+
+    public function test_dashboard_highlights_expiring_contract_and_latest_repair_checklist(): void
+    {
+        CarbonImmutable::setTestNow('2026-03-20');
+        $contract = $this->activeContract();
+        $areas = ['paint', 'doors', 'cabinets', 'lights', 'sink', 'bathroom_fixtures', 'tiles', 'windows'];
+        $items = array_map(fn ($area) => ['area' => $area, 'condition' => $area === 'sink' ? 'needs_repair' : 'good'], $areas);
+        $this->postJson("/api/rooms/$contract->room_id/inspections", [
+            'type' => 'routine', 'inspected_on' => '2026-03-19', 'items' => $items,
+        ])->assertCreated();
+        $this->getJson('/api/staff/dashboard')->assertOk()
+            ->assertJsonPath('expiring_contracts.0.contract_id', $contract->id)
+            ->assertJsonPath('repair_checklists.0.room_id', $contract->room_id)
+            ->assertJsonPath('repair_checklists.0.areas.0', 'sink');
+        CarbonImmutable::setTestNow();
+    }
+
+    public function test_payment_export_is_staff_only_and_preserves_void_history(): void
+    {
+        $contract = $this->activeContract();
+        $payment = $this->postJson("/api/contracts/$contract->id/payments", [
+            'submission_key' => (string) Str::uuid(), 'kind' => 'rent', 'period_month' => '2026-02',
+            'paid_on' => '2026-02-10', 'amount' => '2000.00', 'method' => 'cash',
+        ])->assertCreated()->json();
+        $this->postJson("/api/contracts/$contract->id/payments/{$payment['id']}/void", ['reason' => 'Wrong receipt'])->assertOk();
+        $export = $this->get('/api/staff/payments-export?from=2026-02-01&to=2026-02-28')->assertOk()
+            ->assertHeader('Content-Type', 'text/csv; charset=UTF-8');
+        $this->assertStringContainsString('Wrong receipt', $export->streamedContent());
+        $this->assertStringContainsString('Voided', $export->streamedContent());
+        $this->assertStringNotContainsString('Emergency', $export->streamedContent());
+        $this->getJson('/api/staff/payments-export?from=2025-01-01&to=2026-02-28')->assertUnprocessable();
+        auth()->logout();
+        $this->getJson('/api/staff/payments-export?from=2026-02-01&to=2026-02-28')->assertUnauthorized();
+    }
+
+    public function test_staff_settles_rent_credit_and_move_out_deposit_with_evidence(): void
+    {
+        Storage::fake('local');
+        $contract = $this->activeContract();
+        $payment = $this->postJson("/api/contracts/$contract->id/payments", [
+            'submission_key' => (string) Str::uuid(), 'kind' => 'rent', 'period_month' => '2026-02',
+            'paid_on' => '2026-02-10', 'amount' => '6000.00', 'method' => 'cash',
+        ])->assertCreated()->json();
+        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.rent_credit', '1000.00');
+        $url = "/api/contracts/$contract->id/adjustments";
+        $rentRefund = ['kind' => 'rent_refund', 'amount' => '1000.00', 'occurred_on' => '2026-02-11',
+            'method' => 'cash', 'reason' => 'Tenant overpaid February rent'];
+        $this->postJson($url, [...$rentRefund, 'amount' => '1001.00'])->assertUnprocessable()->assertJsonValidationErrors('amount');
+        $this->postJson($url, $rentRefund)->assertCreated()->assertJsonPath('approver.name', 'Staff');
+        $this->postJson("/api/contracts/$contract->id/payments/{$payment['id']}/void", ['reason' => 'Wrong payment'])->assertUnprocessable();
+        $this->postJson("/api/contracts/$contract->id/end", ['ended_on' => '2026-02-15', 'end_review_note' => 'Move-out reviewed'])->assertOk();
+
+        $areas = ['paint', 'doors', 'cabinets', 'lights', 'sink', 'bathroom_fixtures', 'tiles', 'windows'];
+        $items = array_map(fn ($area) => ['area' => $area, 'condition' => $area === 'paint' ? 'needs_repair' : 'good'], $areas);
+        $inspection = $this->postJson("/api/rooms/$contract->room_id/inspections", [
+            'type' => 'move_out', 'contract_id' => $contract->id, 'inspected_on' => '2026-02-15', 'items' => $items,
+        ])->assertCreated()->json('id');
+        $deduction = ['kind' => 'deposit_deduction', 'amount' => '1000.00', 'occurred_on' => '2026-02-15',
+            'reason' => 'Paint repair after move-out', 'inspection_id' => $inspection];
+        $this->postJson($url, $deduction)->assertUnprocessable()->assertJsonValidationErrors('inspection_id');
+        $this->postJson("/api/inspections/$inspection/photos", [
+            'photo' => UploadedFile::fake()->createWithContent('paint.png', base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVQIHWP4z8DwHwAFgAI/ScL/nwAAAABJRU5ErkJggg==')),
+        ])->assertCreated();
+        $this->postJson($url, $deduction)->assertCreated();
+        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.deposit_refundable', '4000.00');
+        $this->postJson($url, ['kind' => 'deposit_refund', 'amount' => '4000.00', 'occurred_on' => '2026-02-16',
+            'method' => 'cash', 'reason' => 'Return remaining deposit'])->assertCreated();
+        $this->postJson($url, ['kind' => 'advance_refund', 'amount' => '5000.00', 'occurred_on' => '2026-02-16',
+            'method' => 'cash', 'reason' => 'Unused final month advance'])->assertCreated();
+        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.rent_credit', '0.00')
+            ->assertJsonPath($contract->id.'.deposit_refundable', '0.00')
+            ->assertJsonPath($contract->id.'.advance_refundable', '0.00');
+        $this->assertStringContainsString('Settlement: deposit_deduction', $this->get('/api/staff/payments-export?from=2026-02-01&to=2026-02-28')->assertOk()->streamedContent());
+        auth()->logout();
+        $this->postJson($url, $deduction)->assertUnauthorized();
     }
 
     public function test_inspections_validate_all_areas_and_keep_photos_private(): void

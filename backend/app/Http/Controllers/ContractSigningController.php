@@ -30,6 +30,9 @@ class ContractSigningController extends Controller
             if ($contract->status !== 'draft') {
                 throw ValidationException::withMessages(['status' => 'Only a draft contract can be signed.']);
             }
+            if ($data['signed_on'] > $contract->ends_on->format('Y-m-d')) {
+                throw ValidationException::withMessages(['signed_on' => 'Signing cannot be after the contract ends.']);
+            }
 
             $carriedAdvance = 0;
             $carriedDeposit = 0;
@@ -44,7 +47,7 @@ class ContractSigningController extends Controller
                 $carriedAdvance = $this->cents($previousLedger['advance_remaining']);
                 $carriedDeposit = $this->cents($previousLedger['deposit_paid']);
                 $overlapMonth = $contract->starts_on->startOfMonth()->toDateString();
-                $carriedRent = $this->cents((string) $previous->payments()->where('kind', 'rent')->whereDate('period_month', $overlapMonth)->sum('amount'));
+                $carriedRent = $this->cents((string) $previous->payments()->whereNull('voided_at')->where('kind', 'rent')->whereDate('period_month', $overlapMonth)->sum('amount'));
                 if ($carriedRent > $this->cents($contract->monthly_rent)) {
                     throw ValidationException::withMessages(['monthly_rent' => 'The earlier contract has more rent paid for the renewal month than the new rent. Review the credit before signing.']);
                 }

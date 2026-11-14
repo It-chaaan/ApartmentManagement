@@ -16,7 +16,7 @@ class UtilityBillController extends Controller
 {
     public function index(): JsonResponse
     {
-        $bills = UtilityBill::with(['room.building', 'payments.recorder'])
+        $bills = UtilityBill::with(['room.building', 'payments.recorder', 'payments.voider', 'refunds'])
             ->orderByDesc('period_month')->orderByDesc('id')->get();
 
         return response()->json($bills->map(fn (UtilityBill $bill): array => $this->billData($bill)));
@@ -44,7 +44,7 @@ class UtilityBillController extends Controller
             'created_by' => $request->user()->id,
         ]);
 
-        return response()->json($this->billData($bill->load(['room.building', 'payments.recorder'])), 201);
+        return response()->json($this->billData($bill->load(['room.building', 'payments.recorder', 'payments.voider', 'refunds'])), 201);
     }
 
     public function recordPayment(Request $request, UtilityBill $utilityBill): JsonResponse
@@ -62,22 +62,38 @@ class UtilityBillController extends Controller
             $bill = UtilityBill::whereKey($utilityBill->id)->lockForUpdate()->firstOrFail();
             $existing = UtilityBillPayment::where('submission_key', $data['submission_key'])->first();
             if ($existing) {
-                if ($existing->utility_bill_id !== $bill->id || $existing->amount !== number_format((float) $data['amount'], 2, '.', '')) {
+                if ($existing->voided_at || $existing->utility_bill_id !== $bill->id || $existing->amount !== number_format((float) $data['amount'], 2, '.', '')
+                    || $existing->paid_on->format('Y-m-d') !== $data['paid_on'] || $existing->method !== $data['method']
+                    || $existing->reference !== ($data['reference'] ?? null) || $existing->notes !== ($data['notes'] ?? null)) {
                     throw ValidationException::withMessages(['submission_key' => 'This submission key belongs to another payment.']);
                 }
 
                 return;
             }
-            $paidCents = (int) round((float) $bill->payments()->sum('amount') * 100);
-            $amountCents = (int) round((float) $data['amount'] * 100);
-            $billCents = (int) round((float) $bill->amount * 100);
-            if ($amountCents > $billCents - $paidCents) {
-                throw ValidationException::withMessages(['amount' => 'Payment exceeds the remaining bill balance.']);
-            }
             $bill->payments()->create([...$data, 'recorded_by' => $request->user()->id]);
         });
 
-        return response()->json($this->billData($utilityBill->fresh()->load(['room.building', 'payments.recorder'])));
+        return response()->json($this->billData($utilityBill->fresh()->load(['room.building', 'payments.recorder', 'payments.voider', 'refunds'])));
+    }
+
+    public function voidPayment(Request $request, UtilityBill $utilityBill, UtilityBillPayment $payment): JsonResponse
+    {
+        $data = $request->validate(['reason' => ['required', 'string', 'min:3', 'max:2000']]);
+        DB::transaction(function () use ($request, $utilityBill, $payment, $data): void {
+            $bill = UtilityBill::whereKey($utilityBill->id)->lockForUpdate()->firstOrFail();
+            $payment = UtilityBillPayment::whereKey($payment->id)->lockForUpdate()->firstOrFail();
+            if ($payment->utility_bill_id !== $bill->id || $payment->voided_at) {
+                throw ValidationException::withMessages(['payment' => 'This payment cannot be corrected.']);
+            }
+            $paidCents = (int) round((float) $bill->payments()->whereNull('voided_at')->sum('amount') * 100);
+            $refundedCents = (int) round((float) $bill->refunds()->whereNull('voided_at')->sum('amount') * 100);
+            if ($paidCents - (int) round((float) $payment->amount * 100) < (int) round((float) $bill->amount * 100) + $refundedCents && $refundedCents > 0) {
+                throw ValidationException::withMessages(['payment' => 'A refund already uses this overpayment. Void the refund first.']);
+            }
+            $payment->update(['voided_at' => now(), 'voided_by' => $request->user()->id, 'void_reason' => $data['reason']]);
+        });
+
+        return response()->json($this->billData($utilityBill->fresh()->load(['room.building', 'payments.recorder', 'payments.voider', 'refunds'])));
     }
 
     public function upload(Request $request, UtilityBill $utilityBill): JsonResponse
@@ -91,7 +107,7 @@ class UtilityBillController extends Controller
             Storage::disk('local')->delete($previousPath);
         }
 
-        return response()->json($this->billData($utilityBill->fresh()->load(['room.building', 'payments.recorder'])));
+        return response()->json($this->billData($utilityBill->fresh()->load(['room.building', 'payments.recorder', 'payments.voider', 'refunds'])));
     }
 
     public function download(UtilityBill $utilityBill): StreamedResponse
@@ -107,8 +123,11 @@ class UtilityBillController extends Controller
 
     private function billData(UtilityBill $bill): array
     {
-        $paidCents = $bill->payments->sum(fn (UtilityBillPayment $payment): int => (int) round((float) $payment->amount * 100));
-        $balanceCents = max(0, (int) round((float) $bill->amount * 100) - $paidCents);
+        $paidCents = $bill->payments->whereNull('voided_at')->sum(fn (UtilityBillPayment $payment): int => (int) round((float) $payment->amount * 100));
+        $billCents = (int) round((float) $bill->amount * 100);
+        $balanceCents = max(0, $billCents - $paidCents);
+        $refundedCents = $bill->refunds->whereNull('voided_at')->sum(fn ($refund): int => (int) round((float) $refund->amount * 100));
+        $creditCents = max(0, $paidCents - $billCents - $refundedCents);
 
         return [
             'id' => $bill->id,
@@ -120,7 +139,9 @@ class UtilityBillController extends Controller
             'amount' => $bill->amount,
             'paid_amount' => number_format($paidCents / 100, 2, '.', ''),
             'balance' => number_format($balanceCents / 100, 2, '.', ''),
-            'status' => $balanceCents === 0 ? 'paid' : ($paidCents > 0 ? 'partial' : ($bill->due_on->isBefore(today()) ? 'overdue' : 'unpaid')),
+            'credit_available' => number_format($creditCents / 100, 2, '.', ''),
+            'refunded_amount' => number_format($refundedCents / 100, 2, '.', ''),
+            'status' => $creditCents > 0 ? 'overpaid' : ($balanceCents === 0 ? 'paid' : ($paidCents > 0 ? 'partial' : ($bill->due_on->isBefore(today()) ? 'overdue' : 'unpaid'))),
             'account_reference' => $bill->account_reference,
             'delivered_on' => $bill->delivered_on?->format('Y-m-d'),
             'notes' => $bill->notes,
@@ -130,7 +151,10 @@ class UtilityBillController extends Controller
                 'amount' => $payment->amount, 'method' => $payment->method,
                 'reference' => $payment->reference, 'notes' => $payment->notes,
                 'recorder' => ['name' => $payment->recorder->name],
+                'voided_at' => $payment->voided_at?->toIso8601String(), 'void_reason' => $payment->void_reason,
+                'voider' => $payment->voider ? ['name' => $payment->voider->name] : null,
             ]),
+            'refunds' => $bill->refunds,
         ];
     }
 }

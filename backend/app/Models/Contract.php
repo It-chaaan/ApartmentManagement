@@ -39,4 +39,9 @@ class Contract extends Model
     {
         return $this->hasMany(ContractPayment::class)->with('recorder')->orderBy('id');
     }
+
+    public function adjustments(): HasMany
+    {
+        return $this->hasMany(ContractAdjustment::class)->with('approver', 'voider')->orderBy('id');
+    }
 }

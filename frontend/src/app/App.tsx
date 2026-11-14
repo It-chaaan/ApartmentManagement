@@ -4,7 +4,7 @@ import StaffDashboardPage from '../pages/StaffDashboardPage'
 import { usePageMotion } from '../hooks/usePageMotion'
 
 function App() {
-  const isStaff = window.location.pathname === '/staff' || window.location.pathname.startsWith('/staff/')
+  const isStaff = import.meta.env.MODE !== 'public' && (window.location.pathname === '/staff' || window.location.pathname.startsWith('/staff/'))
   usePageMotion()
 
   useEffect(() => {

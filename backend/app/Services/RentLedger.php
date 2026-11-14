@@ -17,7 +17,8 @@ class RentLedger
         if ($renewal && $renewal->starts_on->startOfMonth()->lte($lastMonth)) {
             $lastMonth = CarbonImmutable::parse($renewal->starts_on)->startOfMonth()->subMonth();
         }
-        $payments = $contract->payments;
+        $history = $contract->payments;
+        $payments = $history->whereNull('voided_at');
         $rentByMonth = $payments->where('kind', 'rent')->groupBy(fn ($payment) => $payment->period_month->format('Y-m'));
         $advancePaid = $payments->where('kind', 'advance')->sum(fn ($payment) => $this->cents($payment->amount))
             - $payments->where('kind', 'advance_transfer_out')->sum(fn ($payment) => $this->cents($payment->amount));
@@ -26,6 +27,7 @@ class RentLedger
         $finalMonth = $contract->status === 'ended' ? $lastMonth->format('Y-m') : null;
         $months = [];
         $dueCents = 0;
+        $rentOverpaidCents = 0;
         $month = $start->startOfMonth();
         for ($i = 0; $month->lte($lastMonth) && $i < 1200; $i++, $month = $month->addMonth()) {
             $due = $month->day(min((int) $contract->due_day, $month->daysInMonth));
@@ -34,6 +36,7 @@ class RentLedger
             }
             $amount = $this->cents($contract->monthly_rent);
             $paid = $rentByMonth->get($month->format('Y-m'), collect())->sum(fn ($payment) => $this->cents($payment->amount));
+            $rentOverpaidCents += max(0, $paid - $amount);
             $advanceApplied = $month->format('Y-m') === $finalMonth
                 ? min($advanceRemaining, max(0, $amount - $paid)) : 0;
             $advanceRemaining -= $advanceApplied;
@@ -49,15 +52,25 @@ class RentLedger
             ];
         }
 
+        $adjustments = $contract->adjustments;
+        $activeAdjustments = $adjustments->whereNull('voided_at');
+        $adjustmentTotal = fn (string $kind): int => $activeAdjustments->where('kind', $kind)->sum(fn ($adjustment) => $this->cents($adjustment->amount));
+        $depositPaid = $payments->where('kind', 'deposit')->sum(fn ($payment) => $this->cents($payment->amount))
+            - $payments->where('kind', 'deposit_transfer_out')->sum(fn ($payment) => $this->cents($payment->amount));
+
         return [
             'contract_id' => $contract->id, 'installments' => $months,
             'due_balance' => $this->money($dueCents),
             'advance_paid' => $this->money($advancePaid),
             'advance_applied' => $this->money($advancePaid - $advanceRemaining),
             'advance_remaining' => $this->money($advanceRemaining),
-            'deposit_paid' => $this->money($payments->where('kind', 'deposit')->sum(fn ($payment) => $this->cents($payment->amount))
-                - $payments->where('kind', 'deposit_transfer_out')->sum(fn ($payment) => $this->cents($payment->amount))),
-            'payments' => $payments->sortByDesc('id')->values(),
+            'deposit_paid' => $this->money($depositPaid),
+            'rent_credit' => $this->money(max(0, $rentOverpaidCents - $adjustmentTotal('rent_refund'))),
+            'advance_refundable' => $this->money($contract->status === 'ended' ? max(0, $advanceRemaining - $adjustmentTotal('advance_refund')) : 0),
+            'deposit_refundable' => $this->money($contract->status === 'ended' ? max(0, $depositPaid - $adjustmentTotal('deposit_deduction') - $adjustmentTotal('deposit_refund')) : 0),
+            'deposit_deducted' => $this->money($adjustmentTotal('deposit_deduction')),
+            'adjustments' => $adjustments->sortByDesc('id')->values(),
+            'payments' => $history->sortByDesc('id')->values(),
         ];
     }
 

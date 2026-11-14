@@ -12,6 +12,7 @@ const address = 'T. Santiago, Brgy. Lingunan, Valenzuela City'
 const mapQuery = encodeURIComponent('Brgy. Lingunan, Valenzuela City')
 const mapUrl = `https://www.google.com/maps?q=${mapQuery}&output=embed`
 const mapLink = `https://www.google.com/maps/search/?api=1&query=${mapQuery}`
+const publicOnly = import.meta.env.MODE === 'public'
 function PublicHomePage() {
   const { site, error } = usePublicSite()
   const [activeBuilding, setActiveBuilding] = useState('building-1')
@@ -36,7 +37,7 @@ function PublicHomePage() {
       <header className="public-header">
         <a className="public-brand" href="#top" aria-label="Guillermo Apartment, back to top"><img src="/brand-mark.svg" alt=""/><span>Guillermo<br/>Apartment</span></a>
         <nav className="public-nav" aria-label="Main navigation"><a href="#buildings">Buildings</a><a href="#rooms">Rooms</a><a href="#location">Location</a><a className="public-nav-contact" href="#contact">Contact</a></nav>
-        <div className="public-header-actions"><a className="header-contact" href="#contact">Contact</a><a className="nav-action" href="/staff" onClick={goToStaff}>Apartment management <span aria-hidden="true">↗</span></a></div>
+        <div className="public-header-actions"><a className="header-contact" href="#contact">Contact</a>{!publicOnly && <a className="nav-action" href="/staff" onClick={goToStaff}>Apartment management <span aria-hidden="true">↗</span></a>}</div>
       </header>
 
       <main id="main-content">
@@ -74,7 +75,7 @@ function PublicHomePage() {
         <section className="contact-section" id="contact" aria-labelledby="contact-heading"><div><span className="section-number">06 / GET IN TOUCH</span><h2 id="contact-heading">Have a room in mind?</h2><p>Ask about current availability or arrange a visit. We’ll help you find the right building and room.</p></div><a href={messenger} target="_blank" rel="noopener noreferrer" className="contact-button">Message us on Messenger <span aria-hidden="true">↗</span></a></section>
       </main>
 
-      <footer className="public-footer"><a className="footer-brand" href="#top"><img src="/brand-mark.svg" alt=""/> Guillermo Apartment</a><span>{address}</span><a href="/staff" onClick={goToStaff}>Staff sign in</a></footer>
+      <footer className="public-footer"><a className="footer-brand" href="#top"><img src="/brand-mark.svg" alt=""/> Guillermo Apartment</a><span>{address}</span>{!publicOnly && <a href="/staff" onClick={goToStaff}>Staff sign in</a>}</footer>
     </div>
     {openingStaff && <div className="staff-route-transition" role="status" aria-live="polite"><div className="staff-route-transition-inner"><img src="/brand-mark.svg" alt="" width="50" height="50"/><span>Opening staff sign in</span><span className="staff-route-progress" aria-hidden="true"/></div></div>}
   </div>

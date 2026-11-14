@@ -79,6 +79,8 @@ class TenancyTest extends TestCase
         $this->assertDatabaseHas('contract_payments', ['contract_id' => $first, 'kind' => 'rent', 'period_month' => '2026-11-01', 'amount' => '5000.00', 'paid_on' => '2026-11-04']);
         $this->assertDatabaseCount('contract_payments', 3);
         $this->postJson("/api/contracts/$first/move-in", ['moved_in_on' => '2026-11-03'])->assertUnprocessable()->assertJsonValidationErrors('moved_in_on');
+        $this->postJson("/api/contracts/$first/move-in", ['moved_in_on' => '2026-11-04'])->assertUnprocessable()->assertJsonValidationErrors('moved_in_on');
+        $this->postJson("/api/contracts/$first/move-in", ['moved_in_on' => '2027-11-06'])->assertUnprocessable()->assertJsonValidationErrors('moved_in_on');
         $this->postJson("/api/contracts/$first/move-in", ['moved_in_on' => '2026-11-05'])->assertOk()->assertJsonPath('status', 'active');
         $this->assertSame('occupied', $room->fresh()->status);
         $this->assertSame('5000.00', Contract::findOrFail($first)->advance_paid);
@@ -86,6 +88,7 @@ class TenancyTest extends TestCase
         $this->postJson("/api/contracts/$second/sign", ['signed_on' => '2026-11-04', 'received_full_payment' => true, 'method' => 'cash'])->assertUnprocessable();
         $this->putJson('/api/rooms/'.$room->id, ['status' => 'available'])->assertUnprocessable();
         $this->postJson("/api/contracts/$first/end", ['ended_on' => '2027-11-05'])->assertUnprocessable();
+        $this->postJson("/api/contracts/$first/end", ['ended_on' => '2026-11-04', 'end_review_note' => 'Incorrect date'])->assertUnprocessable()->assertJsonValidationErrors('ended_on');
         $this->postJson("/api/contracts/$first/end", ['ended_on' => '2027-11-05', 'end_review_note' => 'Staff reviewed departure.'])->assertOk();
         $this->assertSame('unverified', $room->fresh()->status);
         $this->assertSame('ended', Contract::findOrFail($first)->status);
@@ -138,6 +141,7 @@ class TenancyTest extends TestCase
         $room = Room::firstOrFail();
         $this->postJson('/api/contracts', ['tenant_id' => $tenant, 'room_id' => $room->id, 'signed_on' => '2026-11-04', 'starts_on' => '2027-11-05', 'ends_on' => '2026-11-05', 'monthly_rent' => -1, 'due_day' => 32, 'advance_amount' => -1, 'deposit_amount' => -1])->assertUnprocessable();
         $this->postJson('/api/contracts', ['tenant_id' => $tenant, 'room_id' => $room->id, 'signed_on' => '2026-11-04', 'starts_on' => '2026-11-05', 'ends_on' => '2027-11-05', 'monthly_rent' => '5000', 'due_day' => 5, 'advance_amount' => '2500', 'deposit_amount' => '5000'])->assertUnprocessable()->assertJsonValidationErrors('advance_amount');
+        $this->postJson('/api/contracts', ['tenant_id' => $tenant, 'room_id' => $room->id, 'signed_on' => '2027-11-06', 'starts_on' => '2026-11-05', 'ends_on' => '2027-11-05', 'monthly_rent' => '5000', 'due_day' => 5, 'advance_amount' => '5000', 'deposit_amount' => '5000'])->assertUnprocessable()->assertJsonValidationErrors('signed_on');
     }
 
     public function test_renewal_collects_only_top_up_and_first_rent_at_signing(): void

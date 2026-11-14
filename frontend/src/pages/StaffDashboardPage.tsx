@@ -40,11 +40,20 @@ function StaffDashboardPage() {
   const [focusContractId, setFocusContractId] = useState<number | null>(null)
 
   useEffect(() => {
-    const update = () => { setSection(currentSection()); window.scrollTo(0, 0) }
+    const update = () => {
+      const next = currentSection()
+      if (next === 'users' && user?.role === 'staff') {
+        window.history.replaceState(null, '', '#dashboard')
+        setSection('dashboard')
+      } else {
+        setSection(next)
+      }
+      window.scrollTo(0, 0)
+    }
     window.addEventListener('hashchange', update)
     window.addEventListener('popstate', update)
     return () => { window.removeEventListener('hashchange', update); window.removeEventListener('popstate', update) }
-  }, [])
+  }, [user])
   const navigate = (next: StaffSection) => {
     if (next === 'users' && user?.role !== 'owner') return
     if (next === 'payments') setPaymentTab('rent')

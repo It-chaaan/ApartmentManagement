@@ -18,6 +18,9 @@ node_modules/
 vendor/
 dist/
 dist-ssr/
+frontend/playwright-report/
+frontend/test-results/
+frontend/.npm-cache/
 public/build/
 public/hot
 

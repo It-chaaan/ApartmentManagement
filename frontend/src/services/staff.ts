@@ -1,5 +1,5 @@
 import { request } from '../api/client'
-import type { Building, Contract, DashboardSummary, Inspection, Ledger, Photo, Room, RoomForm, StaffAccount, StaffUser, Tenant, UtilityBill } from '../types/staff'
+import type { Building, Contract, DashboardSummary, Inspection, Ledger, Photo, Room, RoomForm, StaffAccount, StaffUser, Tenant, UtilityBill, UtilityMeterCharge } from '../types/staff'
 
 export const getSession = () => request<{ user: StaffUser }>('/api/me', { signal: AbortSignal.timeout(4000) })
 export const getBuildings = () => request<Building[]>('/api/buildings')
@@ -60,6 +60,10 @@ export const getInspections = (roomId: number) => request<Inspection[]>(`/api/ro
 export const createInspection = (roomId: number, values: object) => request<Inspection>(`/api/rooms/${roomId}/inspections`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const uploadInspectionPhoto = (id: number, file: File) => { const data = new FormData(); data.append('photo', file); return request(`/api/inspections/${id}/photos`, { method: 'POST', body: data }) }
 export const getUtilityBills = () => request<UtilityBill[]>('/api/utility-bills')
+export const getUtilityMeterCharges = () => request<UtilityMeterCharge[]>('/api/utility-meter-charges')
+export const createUtilityMeterCharge = (values: object) => request<UtilityMeterCharge>('/api/utility-meter-charges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const correctUtilityMeterCharge = (id: number, values: object) => request<UtilityMeterCharge>(`/api/utility-meter-charges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
+export const approveUtilityMeterCharge = (id: number) => request<UtilityMeterCharge>(`/api/utility-meter-charges/${id}/approve`, { method: 'POST' })
 export const createUtilityBill = (values: object) => request<UtilityBill>('/api/utility-bills', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const recordUtilityPayment = (billId: number, values: object) => request<UtilityBill>(`/api/utility-bills/${billId}/payments`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const voidUtilityPayment = (billId: number, paymentId: number, reason: string) => request<UtilityBill>(`/api/utility-bills/${billId}/payments/${paymentId}/void`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })

@@ -11,7 +11,7 @@ The public website is at `/`; the staff workspace is at `/staff`.
 | Public website | Shows both buildings, room details, amenities, a curated property gallery, and a Messenger inquiry link. A room appears available only after staff mark it available. |
 | Rooms and photos | Lets staff edit building and room information, track room status, upload private photos, and approve individual room photos for public display. |
 | Tenancies and contracts | Keeps tenant profiles, occupancy history, contract terms, renewals, signing payments, and private versions of signed contract PDFs. |
-| Payments and utilities | Records rent and manually entered electricity and water bills, including partial payments, overpayments, staff-approved refunds, traceable payment corrections, deposit deductions backed by move-out evidence, private bill PDFs, and a staff-only reconciliation CSV. |
+| Payments and utilities | Records rent, manually entered electricity and water bills, and staff-approved meter-calculated bills from dated kWh or cubic-meter readings and a period rate. Supports partial payments, overpayments, refunds, traceable corrections, evidence-backed deposit deductions, private bill PDFs, and a staff-only reconciliation CSV. |
 | Inspections | Stores private room checklists and inspection photos. |
 | Staff access | Uses staff sessions for management actions. Owners can manage staff accounts and disable access. |
 
@@ -87,11 +87,13 @@ The public API provides only website information and approved photos. Staff rout
 
 The rent ledger charges a full monthly amount for a partial first or last month. Advance payment stays separate while a tenancy is active; at tenancy end, available advance applies only to unpaid final-month rent, with unused advance shown separately. Deposit is never applied to rent automatically. Staff can record refunds of rent or utility overpayments and return unused advance and deposit after tenancy end. Damage deductions draw only from the deposit and require a linked move-out checklist with a repair item and private photo. Staff record refunds only after paying the tenant; the app does not transfer money. Corrections retain the original record and a reason.
 
+Meter-based utility charges use the difference between dated readings multiplied by the rate staff enter for that billing month, rounded to centavos. The billing month follows the current reading date. A missing reading never generates an estimate or bill. Staff review a calculated draft before posting it as a utility bill; a correction to a posted charge remains pending until staff approve the revised amount. Earlier values, reasons, and approvals stay in private history. If a revised bill has an attached PDF, the old PDF is withheld until staff replace it. Manual bill entry remains available. No shared charge is added.
+
 The five curated homepage property photos have not been confirmed as belonging to a particular building or room, so the gallery does not assign that attribution. Approved room photos appear separately with their recorded room attribution.
 
 ## Current scope
 
-The app currently supports public browsing and private staff workflows for rooms, tenants, contracts, payments, utilities, inspections, accounts, corrections, and manual settlement. Online payments, utility email ingestion, automatic meter-based charges, and a tenant portal remain proposed work.
+The app currently supports public browsing and private staff workflows for rooms, tenants, contracts, payments, manual and meter-based utilities, inspections, accounts, corrections, and manual settlement. Online payments, utility email ingestion, and a tenant portal remain proposed work.
 
 For a public-only Vercel site, use `frontend/` as the project root. Its `vercel.json` runs `npm run build:public`, which uses only confirmed property facts, shows every room as “Ask for availability,” and omits staff entry points and private uploads. The local backend and staff workspace stay local. Update the public snapshot deliberately when owner-approved property facts change; this build does not sync with the local database.
 

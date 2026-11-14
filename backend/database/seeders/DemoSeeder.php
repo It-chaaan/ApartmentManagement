@@ -9,6 +9,7 @@ use App\Models\RoomInspection;
 use App\Models\Tenant;
 use App\Models\User;
 use App\Models\UtilityBill;
+use App\Models\UtilityMeterCharge;
 use Carbon\CarbonImmutable;
 use FPDF;
 use Illuminate\Database\Seeder;
@@ -114,6 +115,27 @@ class DemoSeeder extends Seeder
             'reason' => '[DEMO] Partial return of sample water overpayment', 'approved_by' => $owner->id]);
         $this->bill($rooms['building-1:1-B'], 'electricity', $month->subMonth(), '920.00', $owner);
         $this->billPayment($this->bill($rooms['building-2:3'], 'water', $month, '190.00', $owner), '190.00', $owner);
+
+        $meterBill = UtilityBill::create(['room_id' => $rooms['building-1:1-D']->id, 'kind' => 'electricity',
+            'period_month' => $month->toDateString(), 'due_on' => $today->addDays(15)->toDateString(),
+            'amount' => '287.50', 'notes' => '[DEMO] Approved meter-calculated bill', 'created_by' => $owner->id]);
+        UtilityMeterCharge::create(['room_id' => $rooms['building-1:1-D']->id, 'kind' => 'electricity',
+            'period_month' => $month->toDateString(), 'previous_read_on' => $month->subDay()->toDateString(),
+            'current_read_on' => $today->toDateString(), 'previous_reading' => '100.000', 'current_reading' => '125.000',
+            'units_used' => '25.000', 'rate_per_unit' => '11.5000', 'amount' => '287.50',
+            'due_on' => $today->addDays(15)->toDateString(), 'created_by' => $owner->id,
+            'approved_by' => $owner->id, 'approved_at' => now(), 'utility_bill_id' => $meterBill->id]);
+        UtilityMeterCharge::create(['room_id' => $rooms['building-2:2']->id, 'kind' => 'water',
+            'period_month' => $month->toDateString(), 'previous_read_on' => $month->subDay()->toDateString(),
+            'current_read_on' => $today->toDateString(), 'previous_reading' => '50.000', 'current_reading' => '54.000',
+            'units_used' => '4.000', 'rate_per_unit' => '25.0000', 'amount' => '100.00',
+            'due_on' => $today->addDays(15)->toDateString(), 'created_by' => $owner->id,
+            'history' => [['reason' => '[DEMO] Corrected sample meter reading', 'corrected_at' => now()->toIso8601String(), 'previous_approval' => null,
+                'corrected_by' => ['id' => $owner->id, 'name' => $owner->name],
+                'previous' => ['room_id' => $rooms['building-2:2']->id, 'kind' => 'water', 'period_month' => $month->toDateString(),
+                    'previous_read_on' => $month->subDay()->toDateString(), 'current_read_on' => $today->toDateString(),
+                    'previous_reading' => '50.000', 'current_reading' => '53.000', 'units_used' => '3.000',
+                    'rate_per_unit' => '25.0000', 'amount' => '75.00', 'due_on' => $today->addDays(15)->toDateString()]]]]);
 
         $pdf = new FPDF;
         $pdf->AddPage();

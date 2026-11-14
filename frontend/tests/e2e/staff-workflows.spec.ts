@@ -99,6 +99,8 @@ test('staff verifies room status through its form and public availability follow
 
 test('tenant, contract, signing, move-in, and rent correction workflow', async ({ page }) => {
   await signIn(page)
+  let signedFileUrl = ''
+  let renewalStart = ''
   await test.step('Verify a room before signing', async () => {
     await openSection(page, 'Rooms')
     await page.getByRole('searchbox', { name: 'Search rooms' }).fill('1-C')
@@ -122,7 +124,7 @@ test('tenant, contract, signing, move-in, and rent correction workflow', async (
     const draft = page.getByRole('form', { name: 'Contract draft' })
     await draft.getByRole('combobox', { name: 'Room', exact: true }).selectOption({ label: 'Building 1 · Room 1-C (available)' })
     await draft.getByRole('button', { name: 'Save draft' }).click()
-    await expect(page.getByRole('status')).toContainText('Contract draft saved.')
+    await expect(page.getByRole('status').filter({ hasText: 'Contract draft saved.' })).toBeVisible()
     await expect(page.getByRole('heading', { name: /Room 1-C.*E2E Tenant/ })).toBeVisible()
   })
 
@@ -148,6 +150,56 @@ test('tenant, contract, signing, move-in, and rent correction workflow', async (
     await correction.getByLabel(/Reason for voiding payment/).fill('Duplicate test payment')
     await correction.getByRole('button', { name: 'Void payment' }).click()
     await expect(correction.getByText('Voided by E2E Owner: Duplicate test payment')).toBeVisible()
+  })
+
+  await test.step('Keep a signed contract PDF private', async () => {
+    await openSection(page, 'Tenants & contracts')
+    await page.getByRole('button', { name: 'Contracts', exact: true }).click()
+    await page.getByLabel('Find contract').fill('E2E Tenant')
+    await page.getByText('Documents and contract PDF').click()
+    await page.getByLabel('Upload signed PDF').setInputFiles({
+      name: 'e2e-signed.pdf',
+      mimeType: 'application/pdf',
+      buffer: Buffer.from('%PDF-1.4\n1 0 obj<</Type/Catalog>>endobj\n%%EOF'),
+    })
+    await expect(page.getByRole('status')).toContainText('Signed file saved.')
+    signedFileUrl = await page.getByRole('link', { name: /e2e-signed\.pdf/ }).getAttribute('href') ?? ''
+    expect(signedFileUrl).toMatch(/^\/api\/contracts\/\d+\/files\/\d+$/)
+    const privateDownload = await page.request.get(signedFileUrl)
+    expect(privateDownload.ok()).toBeTruthy()
+    expect(privateDownload.headers()['content-type']).toContain('application/pdf')
+  })
+
+  await test.step('Renew the tenancy and retain the earlier contract', async () => {
+    await page.getByRole('button', { name: 'Prepare renewal' }).click()
+    const draft = page.getByRole('form', { name: 'Contract draft' })
+    renewalStart = await draft.getByLabel('Start date').inputValue()
+    await draft.getByRole('button', { name: 'Save draft' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Contract draft saved.' })).toBeVisible()
+    await expect(page.getByText(/Renewal of contract #\d+/)).toBeVisible()
+    await page.getByRole('checkbox', { name: 'I confirm the full signing payment was received.' }).check()
+    await page.getByRole('button', { name: 'Confirm signing and payments' }).click()
+    await expect(page.getByRole('button', { name: 'Start tenancy' })).toBeVisible()
+    await page.getByRole('button', { name: 'Start tenancy' }).click()
+    await expect(page.getByText(/Contract #\d+ · active/)).toBeVisible()
+    await page.getByRole('button', { name: 'History', exact: true }).click()
+    await expect(page.getByLabel('Past contracts').getByText('Renewed')).toBeVisible()
+  })
+
+  await test.step('End the renewed tenancy and withdraw public availability', async () => {
+    await page.getByRole('button', { name: 'Contracts', exact: true }).click()
+    await page.locator('summary').filter({ hasText: 'End tenancy' }).click()
+    const endForm = page.locator('form').filter({ has: page.getByLabel('Review note') })
+    await endForm.getByLabel('End date').fill(renewalStart)
+    await endForm.getByLabel('Review note').fill('E2E move-out review completed')
+    await endForm.getByRole('button', { name: 'End tenancy' }).click()
+    await expect(page.getByRole('status').filter({ hasText: 'Tenancy ended. Room is unverified until checked.' })).toBeVisible()
+    const site = await (await page.request.get('/api/public/site')).json()
+    const room = site.buildings[0].rooms.find((item: { code: string }) => item.code === '1-C')
+    expect(room.availability).toBe('ask')
+    await page.getByRole('button', { name: 'Sign out' }).click()
+    await expect(page.getByRole('heading', { name: 'Welcome back.' })).toBeVisible()
+    expect((await page.request.get(signedFileUrl, { headers: { Accept: 'application/json' } })).status()).toBe(401)
   })
 })
 
@@ -184,4 +236,38 @@ test('utility payment correction and room checklist workflow', async ({ page }) 
     await checklists.getByRole('button', { name: 'History' }).click()
     await expect(checklists.getByText('E2E routine inspection')).toBeVisible()
   })
+})
+
+test('meter reading stays in review until staff posts the calculated utility bill', async ({ page }) => {
+  await signIn(page)
+  await openSection(page, 'Payments & Bills')
+  await page.getByRole('button', { name: 'Utilities' }).click()
+  const meter = page.getByRole('region', { name: 'Meter-based charges' })
+  await meter.getByRole('button', { name: 'Record reading' }).click()
+  const form = page.getByRole('form', { name: 'New meter charge' })
+  await form.getByLabel('Room').selectOption({ label: 'Building 1 · Room 1-F' })
+  await form.getByLabel('Billing month').fill('2026-11')
+  await form.getByLabel('Previous reading date').fill('2026-10-31')
+  await form.getByLabel('Previous reading', { exact: true }).fill('100')
+  await form.getByLabel('Current reading date').fill('2026-11-14')
+  await form.getByLabel('Current reading', { exact: true }).fill('101')
+  await form.getByLabel('Rate per kWh (₱)').fill('12.3456')
+  await form.getByLabel('Due date').fill('2026-11-30')
+  await form.getByRole('button', { name: 'Save draft' }).click()
+  await expect(meter.getByText('Meter charge saved as a draft for review.')).toBeVisible()
+  await expect(meter.getByText('₱12.35', { exact: true })).toBeVisible()
+  await meter.getByRole('button', { name: 'Correct reading or rate' }).click()
+  const correction = page.getByRole('form', { name: 'Correct meter charge' })
+  await correction.getByLabel('Rate per kWh (₱)').fill('13')
+  await correction.getByLabel('Reason for correction').fill('Correct provider rate')
+  await correction.getByRole('button', { name: 'Save correction' }).click()
+  await expect(meter.getByText('₱13.00', { exact: true })).toBeVisible()
+  await meter.getByText('Correction history (1)').click()
+  await expect(meter.getByText('Correct provider rate')).toBeVisible()
+  await meter.getByRole('button', { name: 'Approve and post bill' }).click()
+  await expect(meter.getByText('Calculated bill posted. It is now in the utility bills list.')).toBeVisible()
+  await expect(page.getByRole('region', { name: 'Utility bills' }).getByRole('button', { name: /Room 1-F.*₱13.00 Unpaid/ })).toBeVisible()
+  await page.setViewportSize({ width: 390, height: 844 })
+  await expect(meter.getByRole('button', { name: 'Correct reading or rate' })).toBeVisible()
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBeTruthy()
 })

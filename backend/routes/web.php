@@ -9,6 +9,7 @@ use App\Http\Controllers\StaffOperationsController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\TenancyController;
 use App\Http\Controllers\UtilityBillController;
+use App\Http\Controllers\UtilityMeterChargeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +44,10 @@ Route::prefix('api')->group(function () {
         Route::get('/staff-users', [StaffUserController::class, 'index']);
         Route::patch('/staff-users/{user}', [StaffUserController::class, 'update']);
         Route::get('/utility-bills', [UtilityBillController::class, 'index']);
+        Route::get('/utility-meter-charges', [UtilityMeterChargeController::class, 'index']);
+        Route::post('/utility-meter-charges', [UtilityMeterChargeController::class, 'store']);
+        Route::put('/utility-meter-charges/{charge}', [UtilityMeterChargeController::class, 'correct']);
+        Route::post('/utility-meter-charges/{charge}/approve', [UtilityMeterChargeController::class, 'approve']);
         Route::post('/utility-bills', [UtilityBillController::class, 'store']);
         Route::post('/utility-bills/{utilityBill}/payments', [UtilityBillController::class, 'recordPayment']);
         Route::post('/utility-bills/{utilityBill}/payments/{payment}/void', [UtilityBillController::class, 'voidPayment']);

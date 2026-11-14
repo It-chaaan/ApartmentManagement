@@ -102,7 +102,7 @@ class UtilityBillController extends Controller
         $previousPath = $utilityBill->file_path;
         $file = $request->file('file');
         $path = $file->store('utility-bills/'.$utilityBill->id, 'local');
-        $utilityBill->update(['file_path' => $path, 'file_name' => $file->getClientOriginalName()]);
+        $utilityBill->update(['file_path' => $path, 'file_name' => $file->getClientOriginalName(), 'file_needs_review' => false]);
         if ($previousPath) {
             Storage::disk('local')->delete($previousPath);
         }
@@ -113,6 +113,7 @@ class UtilityBillController extends Controller
     public function download(UtilityBill $utilityBill): StreamedResponse
     {
         abort_unless($utilityBill->file_path && Storage::disk('local')->exists($utilityBill->file_path), 404);
+        abort_if($utilityBill->file_needs_review, 409, 'Replace the outdated bill PDF before downloading it.');
 
         return Storage::disk('local')->download($utilityBill->file_path, $utilityBill->file_name, [
             'Content-Type' => 'application/pdf',
@@ -141,11 +142,12 @@ class UtilityBillController extends Controller
             'balance' => number_format($balanceCents / 100, 2, '.', ''),
             'credit_available' => number_format($creditCents / 100, 2, '.', ''),
             'refunded_amount' => number_format($refundedCents / 100, 2, '.', ''),
-            'status' => $creditCents > 0 ? 'overpaid' : ($balanceCents === 0 ? 'paid' : ($paidCents > 0 ? 'partial' : ($bill->due_on->isBefore(today()) ? 'overdue' : 'unpaid'))),
+            'status' => $billCents === 0 ? 'no_charge' : ($creditCents > 0 ? 'overpaid' : ($balanceCents === 0 ? 'paid' : ($paidCents > 0 ? 'partial' : ($bill->due_on->isBefore(today()) ? 'overdue' : 'unpaid')))),
             'account_reference' => $bill->account_reference,
             'delivered_on' => $bill->delivered_on?->format('Y-m-d'),
             'notes' => $bill->notes,
             'file_name' => $bill->file_name,
+            'file_needs_review' => $bill->file_needs_review,
             'payments' => $bill->payments->map(fn (UtilityBillPayment $payment): array => [
                 'id' => $payment->id, 'paid_on' => $payment->paid_on->format('Y-m-d'),
                 'amount' => $payment->amount, 'method' => $payment->method,

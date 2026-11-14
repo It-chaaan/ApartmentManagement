@@ -8,13 +8,13 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class UtilityBill extends Model
 {
-    protected $fillable = ['room_id', 'kind', 'period_month', 'due_on', 'amount', 'account_reference', 'delivered_on', 'notes', 'file_path', 'file_name', 'created_by'];
+    protected $fillable = ['room_id', 'kind', 'period_month', 'due_on', 'amount', 'account_reference', 'delivered_on', 'notes', 'file_path', 'file_name', 'file_needs_review', 'created_by'];
 
     protected $hidden = ['file_path'];
 
     protected function casts(): array
     {
-        return ['period_month' => 'date:Y-m-d', 'due_on' => 'date:Y-m-d', 'delivered_on' => 'date:Y-m-d', 'amount' => 'decimal:2'];
+        return ['period_month' => 'date:Y-m-d', 'due_on' => 'date:Y-m-d', 'delivered_on' => 'date:Y-m-d', 'amount' => 'decimal:2', 'file_needs_review' => 'boolean'];
     }
 
     public function room(): BelongsTo

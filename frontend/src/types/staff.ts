@@ -35,9 +35,17 @@ export type UtilityBillRefund = { id: number; amount: string; refunded_on: strin
 export type UtilityBill = {
   id: number; room_id: number; room: { code: string; building_id: number; building: { name: string } }
   kind: 'electricity' | 'water'; period_month: string; due_on: string; amount: string
-  paid_amount: string; balance: string; credit_available: string; refunded_amount: string; status: 'paid' | 'partial' | 'overdue' | 'unpaid' | 'overpaid'
+  paid_amount: string; balance: string; credit_available: string; refunded_amount: string; status: 'paid' | 'partial' | 'overdue' | 'unpaid' | 'overpaid' | 'no_charge'
   account_reference: string | null; delivered_on: string | null; notes: string | null
-  file_name: string | null; payments: UtilityBillPayment[]; refunds: UtilityBillRefund[]
+  file_name: string | null; file_needs_review: boolean; payments: UtilityBillPayment[]; refunds: UtilityBillRefund[]
+}
+
+export type UtilityMeterCharge = {
+  id: number; room_id: number; room: UtilityBill['room']; kind: 'electricity' | 'water'; period_month: string
+  previous_read_on: string; current_read_on: string; previous_reading: string; current_reading: string
+  units_used: string; unit: 'kWh' | 'm³'; rate_per_unit: string; amount: string; due_on: string
+  status: 'draft' | 'revision' | 'posted'; utility_bill_id: number | null; created_by: string; approved_by: string | null; approved_at: string | null
+  history: { reason: string; corrected_at: string; corrected_by: { id: number; name: string }; previous_approval: { by: string; at: string } | null; previous: { room_id: number; kind: 'electricity' | 'water'; period_month: string; previous_read_on: string; current_read_on: string; previous_reading: string; current_reading: string; units_used: string; rate_per_unit: string; amount: string; due_on: string } }[]
 }
 
 export type RoomForm = {

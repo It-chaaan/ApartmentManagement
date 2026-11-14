@@ -69,6 +69,7 @@ async function main() {
     ...process.env,
     APP_ENV: 'e2e', APP_DEBUG: 'false', APP_KEY: `base64:${randomBytes(32).toString('base64')}`,
     APP_URL: backendUrl, DB_CONNECTION: 'sqlite', DB_DATABASE: database, DB_URL: '',
+    LOCAL_FILESYSTEM_ROOT: join(runDirectory, 'private').replaceAll('\\', '/'),
     SESSION_DRIVER: 'database', CACHE_STORE: 'array', QUEUE_CONNECTION: 'sync',
     E2E_TEST_PASSWORD: testPassword,
   }

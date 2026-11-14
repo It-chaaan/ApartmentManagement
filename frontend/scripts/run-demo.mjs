@@ -85,7 +85,7 @@ async function checkEndpoints() {
   if (site.buildings.length !== 2 || site.buildings.flatMap(building => building.rooms).length !== 18 || JSON.stringify(site).includes('[DEMO]')) {
     throw new Error('Public site returned an unexpected room count or private demo data.')
   }
-  for (const path of ['/api/tenants', '/api/contracts', '/api/utility-bills', '/api/staff-users']) {
+  for (const path of ['/api/tenants', '/api/contracts', '/api/utility-bills', '/api/utility-meter-charges', '/api/staff-users']) {
     if ((await guest.get(path)).status() !== 401) throw new Error(`Guest access check failed: ${path}`)
   }
   await guest.dispose()
@@ -95,7 +95,7 @@ async function checkEndpoints() {
   const login = await owner.post('/api/login', { headers: { 'X-CSRF-TOKEN': csrf.token }, data: { email: 'demo-owner@example.test', password } })
   if (!login.ok()) throw new Error(`Demo owner login failed (${login.status()}).`)
   const paths = ['/api/me', '/api/buildings', '/api/rooms', '/api/tenants', '/api/contracts',
-    '/api/staff/dashboard', '/api/staff/ledgers', '/api/staff-users', '/api/utility-bills', '/api/contract-template']
+    '/api/staff/dashboard', '/api/staff/ledgers', '/api/staff-users', '/api/utility-bills', '/api/utility-meter-charges', '/api/contract-template']
   const results = await Promise.all(paths.map(async path => [path, await owner.get(path)]))
   for (const [path, response] of results) {
     if (!response.ok()) throw new Error(`Demo endpoint failed: ${path} (${response.status()})`)
@@ -104,9 +104,11 @@ async function checkEndpoints() {
   const tenants = await results.find(([path]) => path === '/api/tenants')[1].json()
   const contracts = await results.find(([path]) => path === '/api/contracts')[1].json()
   const bills = await results.find(([path]) => path === '/api/utility-bills')[1].json()
+  const meterCharges = await results.find(([path]) => path === '/api/utility-meter-charges')[1].json()
   const dashboard = await results.find(([path]) => path === '/api/staff/dashboard')[1].json()
   const ledgers = await results.find(([path]) => path === '/api/staff/ledgers')[1].json()
-  if (rooms.length !== 18 || tenants.length !== 6 || contracts.length !== 6 || bills.length !== 4
+  if (rooms.length !== 18 || tenants.length !== 6 || contracts.length !== 6 || bills.length !== 5
+    || meterCharges.length !== 2 || !meterCharges.some(charge => charge.status === 'draft') || !meterCharges.some(charge => charge.status === 'posted')
     || !dashboard.expiring_contracts.length || !dashboard.repair_checklists.length || Object.keys(ledgers).length !== 6) {
     throw new Error('Seeded records did not appear in the management endpoints.')
   }
@@ -144,7 +146,7 @@ async function checkEndpoints() {
     throw new Error('Staff role check failed.')
   }
   await staff.dispose()
-  console.log(`Demo API checks passed: ${rooms.length} rooms, ${tenants.length} tenants, ${contracts.length} contracts, ${bills.length} bills, private files, and guest access.`)
+  console.log(`Demo API checks passed: ${rooms.length} rooms, ${tenants.length} tenants, ${contracts.length} contracts, ${bills.length} bills, ${meterCharges.length} meter charges, private files, and guest access.`)
 }
 
 async function main() {

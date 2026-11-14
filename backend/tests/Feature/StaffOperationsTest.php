@@ -185,13 +185,24 @@ class StaffOperationsTest extends TestCase
         ])->assertCreated();
         $this->postJson($url, $deduction)->assertCreated();
         $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.deposit_refundable', '4000.00');
+        $depositRefund = $this->postJson($url, ['kind' => 'deposit_refund', 'amount' => '4000.00', 'occurred_on' => '2026-02-16',
+            'method' => 'cash', 'reason' => 'Return remaining deposit'])->assertCreated()->json('id');
+        $this->postJson("$url/$depositRefund/void", ['reason' => 'Receipt reference entered incorrectly'])->assertOk();
+        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.deposit_refundable', '4000.00');
         $this->postJson($url, ['kind' => 'deposit_refund', 'amount' => '4000.00', 'occurred_on' => '2026-02-16',
-            'method' => 'cash', 'reason' => 'Return remaining deposit'])->assertCreated();
+            'method' => 'cash', 'reference' => 'CORRECTED-RECEIPT', 'reason' => 'Return remaining deposit'])->assertCreated();
         $this->postJson($url, ['kind' => 'advance_refund', 'amount' => '5000.00', 'occurred_on' => '2026-02-16',
             'method' => 'cash', 'reason' => 'Unused final month advance'])->assertCreated();
-        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.rent_credit', '0.00')
+        $this->getJson('/api/staff/ledgers')->assertJsonPath($contract->id.'.due_balance', '0.00')
+            ->assertJsonPath($contract->id.'.deposit_deducted', '1000.00')
+            ->assertJsonPath($contract->id.'.rent_credit', '0.00')
             ->assertJsonPath($contract->id.'.deposit_refundable', '0.00')
             ->assertJsonPath($contract->id.'.advance_refundable', '0.00');
+        $history = $this->getJson('/api/staff/ledgers')->json($contract->id.'.adjustments');
+        $original = collect($history)->firstWhere('id', $depositRefund);
+        $this->assertSame('Receipt reference entered incorrectly', $original['void_reason']);
+        $this->assertSame('Staff', $original['voider']['name']);
+        $this->assertNotNull($original['voided_at']);
         $this->assertStringContainsString('Settlement: deposit_deduction', $this->get('/api/staff/payments-export?from=2026-02-01&to=2026-02-28')->assertOk()->streamedContent());
         auth()->logout();
         $this->postJson($url, $deduction)->assertUnauthorized();
@@ -220,17 +231,18 @@ class StaffOperationsTest extends TestCase
     {
         $this->seed();
         $tenant = Tenant::create(['full_name' => 'Private Tenant']);
-        Contract::create(['tenant_id' => $tenant->id, 'room_id' => Room::firstOrFail()->id,
+        $room = Room::firstOrFail();
+        $contract = Contract::create(['tenant_id' => $tenant->id, 'room_id' => $room->id,
             'signed_on' => '2026-01-01', 'starts_on' => '2026-01-01', 'ends_on' => '2027-01-01',
             'monthly_rent' => '5000', 'due_day' => 1, 'advance_amount' => '5000', 'deposit_amount' => '5000']);
-        foreach (['/api/staff/dashboard', '/api/staff/ledgers', '/api/rooms/1/inspections'] as $route) {
+        foreach (['/api/staff/dashboard', '/api/staff/ledgers', "/api/rooms/{$room->id}/inspections"] as $route) {
             $this->getJson($route)->assertUnauthorized();
         }
-        $this->postJson('/api/contracts/1/payments', [])->assertUnauthorized();
-        $this->postJson('/api/rooms/1/inspections', [])->assertUnauthorized();
+        $this->postJson("/api/contracts/{$contract->id}/payments", [])->assertUnauthorized();
+        $this->postJson("/api/rooms/{$room->id}/inspections", [])->assertUnauthorized();
         $this->actingAs(User::create(['name' => 'Viewer', 'email' => 'viewer@example.test', 'password' => 'long-secret-password', 'role' => 'viewer']));
         $this->getJson('/api/staff/ledgers')->assertForbidden();
-        $this->getJson('/api/rooms/1/inspections')->assertForbidden();
-        $this->postJson('/api/contracts/1/payments', [])->assertForbidden();
+        $this->getJson("/api/rooms/{$room->id}/inspections")->assertForbidden();
+        $this->postJson("/api/contracts/{$contract->id}/payments", [])->assertForbidden();
     }
 }

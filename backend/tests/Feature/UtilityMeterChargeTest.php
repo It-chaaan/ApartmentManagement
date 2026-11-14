@@ -120,6 +120,27 @@ class UtilityMeterChargeTest extends TestCase
         $this->assertSame('no_charge', collect($this->getJson('/api/utility-bills')->json())->firstWhere('period_month', '2026-06')['status']);
     }
 
+    public function test_calculated_charges_match_fictional_provider_readings_and_rates(): void
+    {
+        $this->seed();
+        $this->actingAs(User::create(['name' => 'Staff', 'email' => 'provider-check@example.test', 'password' => 'long-secret-password', 'role' => 'staff']));
+        $room = Room::firstOrFail();
+        $electricity = [...$this->reading($room->id), 'previous_reading' => '100.000',
+            'current_reading' => '125.000', 'rate_per_unit' => '11.5000'];
+        $water = [...$this->reading($room->id), 'kind' => 'water', 'previous_reading' => '50.000',
+            'current_reading' => '54.000', 'rate_per_unit' => '25.0000'];
+        $electricityCharge = $this->postJson('/api/utility-meter-charges', $electricity)->assertCreated()
+            ->assertJsonPath('units_used', '25.000')->assertJsonPath('amount', '287.50')->json('id');
+        $waterCharge = $this->postJson('/api/utility-meter-charges', $water)->assertCreated()
+            ->assertJsonPath('units_used', '4.000')->assertJsonPath('amount', '100.00')->json('id');
+        $this->getJson('/api/utility-bills')->assertJsonCount(0);
+        $this->postJson("/api/utility-meter-charges/$electricityCharge/approve")->assertOk();
+        $this->postJson("/api/utility-meter-charges/$waterCharge/approve")->assertOk();
+        $bills = collect($this->getJson('/api/utility-bills')->assertJsonCount(2)->json());
+        $this->assertSame('287.50', $bills->firstWhere('kind', 'electricity')['amount']);
+        $this->assertSame('100.00', $bills->firstWhere('kind', 'water')['amount']);
+    }
+
     private function reading(int $roomId): array
     {
         return [

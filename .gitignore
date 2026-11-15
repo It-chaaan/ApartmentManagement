@@ -35,3 +35,6 @@ storage/framework/cache/
 .idea/
 .DS_Store
 Thumbs.db
+
+#public/uploads/
+/portfolio/

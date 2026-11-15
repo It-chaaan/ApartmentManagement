@@ -25,6 +25,8 @@ export default function TenancyPage({ rooms, buildingId, focusContractId, onOpen
   const [showTenantForm, setShowTenantForm] = useState(false)
   const [showContractForm, setShowContractForm] = useState(false)
   const [query, setQuery] = useState('')
+  const [identityChecked, setIdentityChecked] = useState(false)
+  const [portalAccess, setPortalAccess] = useState<{ tenantId: number; enabled: boolean; invitation_pending: boolean } | null>(null)
   const load = async () => {
     try { const [t, c] = await Promise.all([api.getTenants(), api.getContracts()]); setTenants(t); setContracts(c); setError('') }
     catch (e) { setError((e as Error).message) } finally { setLoading(false) }
@@ -41,6 +43,9 @@ export default function TenancyPage({ rooms, buildingId, focusContractId, onOpen
   const tenant = visibleTenants.find(t => t.id === selectedTenant) ?? visibleTenants[0]
   const contract = visibleContracts.find(c => c.id === selectedContract) ?? visibleContracts[0]
   const tenantContracts = useMemo(() => scopedContracts.filter(c => c.tenant_id === tenant?.id), [scopedContracts, tenant?.id])
+  const tenantId = tenant?.id
+  const selectedPortalAccess = portalAccess?.tenantId === tenantId ? portalAccess : null
+  useEffect(() => { if (tenantId) api.getTenantPortalAccess(tenantId).then(value => setPortalAccess({ tenantId, ...value })).catch(() => setPortalAccess(null)) }, [tenantId])
   const pastContracts = useMemo(() => visibleContracts.filter(c => c.status === 'ended' || c.status === 'renewed'), [visibleContracts])
   const run = async (action: () => Promise<unknown>, success: string) => {
     setBusy(true); setError(''); setNotice('')
@@ -85,7 +90,7 @@ export default function TenancyPage({ rooms, buildingId, focusContractId, onOpen
                 key={item.id}
                 type="button"
                 aria-pressed={tenant?.id === item.id}
-                onClick={() => setSelectedTenant(item.id)}
+                onClick={() => { setSelectedTenant(item.id); setIdentityChecked(false) }}
                 className={`block min-h-18 w-full rounded-xl border p-4 text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#0B1F3A] ${tenant?.id === item.id ? 'border-[#111] bg-[#f8f8f8]' : 'border-[#dedede] hover:bg-[#fafafa]'}`}
               ><strong className="block break-words text-sm">{item.full_name}</strong><span className="mt-1 block text-xs text-[#595959]">{item.phone || 'No phone recorded'}</span></button>) : <p className="rounded-xl border border-dashed border-[#d5d5d5] p-6 text-sm text-[#595959]">No tenants to show.</p>}
             </div>
@@ -96,6 +101,7 @@ export default function TenancyPage({ rooms, buildingId, focusContractId, onOpen
                   <button type="button" onClick={() => editTenant(tenant)} className="min-h-10 rounded-lg border border-[#d5d5d5] px-3 text-sm font-semibold hover:bg-[#f7f7f7] focus-visible:outline-2 focus-visible:outline-[#0B1F3A]">Edit tenant</button>
                 </div>
                 <dl className="mt-4 grid gap-4 text-sm sm:grid-cols-2"><div><dt className="text-[#595959]">Address</dt><dd className="mt-1 break-words">{tenant.contact_address || 'Not recorded'}</dd></div><div><dt className="text-[#595959]">Emergency contact</dt><dd className="mt-1 break-words">{tenant.emergency_name || 'Not recorded'}{tenant.emergency_phone ? ` · ${tenant.emergency_phone}` : ''}{tenant.emergency_relationship ? ` · ${tenant.emergency_relationship}` : ''}</dd></div></dl>
+                {tenant.email && tenantContracts.some(item => item.status !== 'draft') && <div className="mt-5 rounded-xl border border-[#dedede] p-4"><h4 className="font-semibold">Tenant portal access</h4><p className="mt-1 text-xs text-[#595959]">{selectedPortalAccess?.enabled ? 'Access enabled' : selectedPortalAccess?.invitation_pending ? 'Invitation pending' : 'No active access'}. Staff must check identity before sending a one-day activation link. A new invitation also serves as staff-assisted account recovery. With local log mail, the link is written to Laravel's log until a mail provider is configured.</p><label className="mt-3 flex items-start gap-2 text-sm"><input type="checkbox" checked={identityChecked} onChange={event => setIdentityChecked(event.target.checked)} className="mt-1" /><span>I checked this tenant's identity and email address.</span></label><div className="mt-3 flex flex-wrap gap-2"><button type="button" disabled={!identityChecked || busy} onClick={() => { void run(async () => { await api.inviteTenant(tenant.id); setPortalAccess({ tenantId: tenant.id, ...await api.getTenantPortalAccess(tenant.id) }) }, 'Invitation created. Check the local mail log when using log mail.'); setIdentityChecked(false) }} className="min-h-11 rounded-lg border border-[#d5d5d5] px-4 text-sm font-semibold disabled:opacity-50">Send invitation</button>{(selectedPortalAccess?.enabled || selectedPortalAccess?.invitation_pending) && <button type="button" disabled={busy} onClick={() => void run(async () => { setPortalAccess({ tenantId: tenant.id, ...await api.revokeTenantPortalAccess(tenant.id) }) }, 'Tenant portal access disabled.')} className="min-h-11 rounded-lg border border-[#d5d5d5] px-4 text-sm font-semibold disabled:opacity-50">Disable access</button>}</div></div>}
                 <div className="mt-6 flex flex-wrap items-center justify-between gap-3"><h4 className="font-semibold">Contracts</h4><button type="button" onClick={() => beginContract(tenant)} className="min-h-10 rounded-lg border border-[#d5d5d5] px-3 text-sm font-semibold hover:bg-[#f7f7f7] focus-visible:outline-2 focus-visible:outline-[#0B1F3A]">Create contract</button></div>
                 {tenantContracts.length ? <div className="mt-2 space-y-2">{tenantContracts.map(item => <button key={item.id} type="button" onClick={() => { setSelectedContract(item.id); setView('contracts') }} className="block min-h-14 w-full rounded-lg border border-[#e5e5e5] p-3 text-left text-sm hover:bg-[#fafafa] focus-visible:outline-2 focus-visible:outline-[#0B1F3A]"><strong>Room {item.room.code} · {item.room.building.name}</strong><span className="mt-1 block text-xs text-[#595959]">{item.starts_on} to {item.ends_on} · {item.status}</span></button>)}</div> : <p className="mt-2 text-sm text-[#595959]">No contracts recorded.</p>}
               </> : <p className="text-sm text-[#595959]">Add a tenant to begin.</p>}

@@ -21,6 +21,11 @@ class ManagementController extends Controller
         if (! Auth::attempt($credentials + ['is_active' => true])) {
             return response()->json(['message' => 'The email or password is incorrect.'], 422);
         }
+        if (! in_array($request->user()->role, ['owner', 'staff'], true)) {
+            Auth::logout();
+
+            return response()->json(['message' => 'The email or password is incorrect.'], 422);
+        }
         $request->session()->regenerate();
 
         return response()->json(['user' => $request->user()->only('id', 'name', 'email', 'role')]);

@@ -8,7 +8,9 @@ use App\Http\Controllers\SettlementController;
 use App\Http\Controllers\StaffOperationsController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\TenancyController;
+use App\Http\Controllers\TenantPortalController;
 use App\Http\Controllers\UtilityBillController;
+use App\Http\Controllers\UtilityEmailImportController;
 use App\Http\Controllers\UtilityMeterChargeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -18,6 +20,13 @@ Route::prefix('api')->group(function () {
     Route::get('/public/photos/{photo}', [PublicSiteController::class, 'photo']);
     Route::get('/csrf', fn (Request $request) => response()->json(['token' => csrf_token()]));
     Route::post('/login', [ManagementController::class, 'login'])->middleware('throttle:5,1');
+    Route::post('/tenant/activate', [TenantPortalController::class, 'activate'])->middleware('throttle:5,1');
+    Route::post('/tenant/login', [TenantPortalController::class, 'login'])->middleware('throttle:5,1');
+    Route::middleware('auth')->prefix('tenant')->group(function () {
+        Route::get('/me', [TenantPortalController::class, 'me']);
+        Route::get('/contracts', [TenantPortalController::class, 'contracts']);
+        Route::post('/logout', [TenantPortalController::class, 'logout']);
+    });
     Route::middleware(['auth', 'staff.role'])->group(function () {
         Route::get('/me', [ManagementController::class, 'me']);
         Route::get('/staff/dashboard', [StaffOperationsController::class, 'dashboard']);
@@ -44,6 +53,11 @@ Route::prefix('api')->group(function () {
         Route::get('/staff-users', [StaffUserController::class, 'index']);
         Route::patch('/staff-users/{user}', [StaffUserController::class, 'update']);
         Route::get('/utility-bills', [UtilityBillController::class, 'index']);
+        Route::get('/utility-email-imports', [UtilityEmailImportController::class, 'index']);
+        Route::post('/utility-email-imports', [UtilityEmailImportController::class, 'store']);
+        Route::get('/utility-email-imports/{import}/file', [UtilityEmailImportController::class, 'download']);
+        Route::post('/utility-email-imports/{import}/approve', [UtilityEmailImportController::class, 'approve']);
+        Route::post('/utility-email-imports/{import}/reject', [UtilityEmailImportController::class, 'reject']);
         Route::get('/utility-meter-charges', [UtilityMeterChargeController::class, 'index']);
         Route::post('/utility-meter-charges', [UtilityMeterChargeController::class, 'store']);
         Route::put('/utility-meter-charges/{charge}', [UtilityMeterChargeController::class, 'correct']);
@@ -57,6 +71,9 @@ Route::prefix('api')->group(function () {
         Route::get('/utility-bills/{utilityBill}/file', [UtilityBillController::class, 'download']);
         Route::get('/tenants', [TenancyController::class, 'tenants']);
         Route::post('/tenants', [TenancyController::class, 'storeTenant']);
+        Route::post('/tenants/{tenant}/invite', [TenantPortalController::class, 'invite'])->middleware('throttle:10,1');
+        Route::get('/tenants/{tenant}/portal-access', [TenantPortalController::class, 'status']);
+        Route::post('/tenants/{tenant}/portal-access/revoke', [TenantPortalController::class, 'revoke']);
         Route::put('/tenants/{tenant}', [TenancyController::class, 'updateTenant']);
         Route::get('/contracts', [TenancyController::class, 'contracts']);
         Route::post('/contracts', [TenancyController::class, 'storeContract']);

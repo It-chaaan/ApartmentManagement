@@ -4,6 +4,7 @@ import type { Room, UtilityBill } from '../types/staff'
 import { formatStaffPeso as peso, titleCase } from '../utils/property'
 import UtilityRefundPanel from '../components/staff/UtilityRefundPanel'
 import MeterChargesPanel from '../components/staff/MeterChargesPanel'
+import UtilityEmailImportsPanel from '../components/staff/UtilityEmailImportsPanel'
 
 const today = () => new Date().toLocaleDateString('en-CA')
 const blankBill = { room_id: '', kind: 'electricity', period_month: today().slice(0, 7), due_on: '', amount: '', account_reference: '', delivered_on: '', notes: '' }
@@ -70,6 +71,7 @@ export default function UtilitiesPage({ rooms }: { rooms: Room[] }) {
     {error && <p role="alert" className="mt-4 rounded-lg border border-red-200 bg-red-50 p-3 text-sm text-red-700">{error}</p>}
     {notice && <p role="status" className="mt-4 rounded-lg border border-green-200 bg-green-50 p-3 text-sm text-green-800">{notice}</p>}
     <MeterChargesPanel rooms={rooms} onPosted={async () => setBills(await api.getUtilityBills())} />
+    <UtilityEmailImportsPanel rooms={rooms} onApproved={async () => setBills(await api.getUtilityBills())} />
     <div className="mt-4 grid gap-3 sm:grid-cols-[1fr_160px]"><label className="text-sm font-semibold">Find bill<input type="search" className="field" value={query} onChange={event => setQuery(event.target.value)} placeholder="Room, month, utility, or account" /></label><label className="text-sm font-semibold">Status<select className="field" value={statusFilter} onChange={event => setStatusFilter(event.target.value)}><option value="all">All statuses</option><option value="unpaid">Unpaid</option><option value="partial">Partial</option><option value="overdue">Overdue</option><option value="overpaid">Overpaid</option><option value="paid">Paid</option><option value="no_charge">No charge</option></select></label></div>
     <div className="mt-5 grid gap-4 xl:grid-cols-[minmax(280px,0.9fr)_minmax(0,1.4fr)]">
       <div className="min-w-0 rounded-xl border border-[#e0e0e0] bg-white">

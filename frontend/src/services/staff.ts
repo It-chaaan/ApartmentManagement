@@ -1,5 +1,5 @@
 import { request } from '../api/client'
-import type { Building, Contract, DashboardSummary, Inspection, Ledger, Photo, Room, RoomForm, StaffAccount, StaffUser, Tenant, UtilityBill, UtilityMeterCharge } from '../types/staff'
+import type { Building, Contract, DashboardSummary, Inspection, Ledger, Photo, Room, RoomForm, StaffAccount, StaffUser, Tenant, UtilityBill, UtilityEmailImport, UtilityMeterCharge } from '../types/staff'
 
 export const getSession = () => request<{ user: StaffUser }>('/api/me', { signal: AbortSignal.timeout(4000) })
 export const getBuildings = () => request<Building[]>('/api/buildings')
@@ -60,6 +60,13 @@ export const getInspections = (roomId: number) => request<Inspection[]>(`/api/ro
 export const createInspection = (roomId: number, values: object) => request<Inspection>(`/api/rooms/${roomId}/inspections`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const uploadInspectionPhoto = (id: number, file: File) => { const data = new FormData(); data.append('photo', file); return request(`/api/inspections/${id}/photos`, { method: 'POST', body: data }) }
 export const getUtilityBills = () => request<UtilityBill[]>('/api/utility-bills')
+export const getUtilityEmailImports = () => request<UtilityEmailImport[]>('/api/utility-email-imports')
+export const importUtilityEmailSample = (values: FormData) => request<UtilityEmailImport>('/api/utility-email-imports', { method: 'POST', body: values })
+export const approveUtilityEmailImport = (id: number) => request<UtilityEmailImport>(`/api/utility-email-imports/${id}/approve`, { method: 'POST' })
+export const rejectUtilityEmailImport = (id: number, reason: string) => request<UtilityEmailImport>(`/api/utility-email-imports/${id}/reject`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ reason }) })
+export const inviteTenant = (id: number) => request<{ message: string }>(`/api/tenants/${id}/invite`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ identity_checked: true }) })
+export const getTenantPortalAccess = (id: number) => request<{ enabled: boolean; invitation_pending: boolean }>(`/api/tenants/${id}/portal-access`)
+export const revokeTenantPortalAccess = (id: number) => request<{ enabled: boolean; invitation_pending: boolean }>(`/api/tenants/${id}/portal-access/revoke`, { method: 'POST' })
 export const getUtilityMeterCharges = () => request<UtilityMeterCharge[]>('/api/utility-meter-charges')
 export const createUtilityMeterCharge = (values: object) => request<UtilityMeterCharge>('/api/utility-meter-charges', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })
 export const correctUtilityMeterCharge = (id: number, values: object) => request<UtilityMeterCharge>(`/api/utility-meter-charges/${id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(values) })

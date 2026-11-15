@@ -40,6 +40,16 @@ export type UtilityBill = {
   file_name: string | null; file_needs_review: boolean; payments: UtilityBillPayment[]; refunds: UtilityBillRefund[]
 }
 
+export type UtilityEmailImport = {
+  id: number; room_id: number; room: { code: string; building: string }
+  kind: 'electricity' | 'water'; period_month: string; due_on: string; amount: string
+  sender_address: string; message_id: string | null; received_on: string
+  account_reference: string | null; notes: string | null; file_name: string
+  status: 'pending' | 'exception' | 'approved' | 'rejected'; exception_reason: string | null
+  review_reason: string | null; imported_by: string; reviewed_by: string | null
+  reviewed_at: string | null; utility_bill_id: number | null
+}
+
 export type UtilityMeterCharge = {
   id: number; room_id: number; room: UtilityBill['room']; kind: 'electricity' | 'water'; period_month: string
   previous_read_on: string; current_read_on: string; previous_reading: string; current_reading: string

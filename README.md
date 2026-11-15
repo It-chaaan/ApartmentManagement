@@ -11,9 +11,10 @@ The public website is at `/`; the staff workspace is at `/staff`.
 | Public website | Shows both buildings, room details, amenities, a curated property gallery, and a Messenger inquiry link. A room appears available only after staff mark it available. |
 | Rooms and photos | Lets staff edit building and room information, track room status, upload private photos, and approve individual room photos for public display. |
 | Tenancies and contracts | Keeps tenant profiles, occupancy history, contract terms, renewals, signing payments, and private versions of signed contract PDFs. |
-| Payments and utilities | Records rent, manually entered electricity and water bills, and staff-approved meter-calculated bills from dated kWh or cubic-meter readings and a period rate. Supports partial payments, overpayments, refunds, traceable corrections, evidence-backed deposit deductions, private bill PDFs, and a staff-only reconciliation CSV. |
+| Payments and utilities | Records rent, manually entered electricity and water bills, and staff-approved meter-calculated bills from dated kWh or cubic-meter readings and a period rate. Supports partial payments, overpayments, refunds, traceable corrections, evidence-backed deposit deductions, private bill PDFs, and a staff-only reconciliation CSV. Staff can import a sample PDF from a utility email into a private review queue; only approval posts a bill. |
 | Inspections | Stores private room checklists and inspection photos. |
 | Staff access | Uses staff sessions for management actions. Owners can manage staff accounts and disable access. |
+| Tenant portal | Staff can invite a tenant after checking identity, recover access through a new invitation, or disable access. The tenant activates through a one-use email link and can see only their own signed contract terms and recorded tenancy payments at `/tenant`. |
 
 The dashboard can show all buildings or filter records to one building. The initial seeder creates two buildings and 18 rooms with **unverified** room status; staff must verify availability before advertising a room as available.
 
@@ -25,6 +26,8 @@ The dashboard can show all buildings or filter records to one building. The init
 | [`backend/`](backend/) | Laravel 13, PHP, session-protected routes, models, migrations, seeders, and PHPUnit tests. |
 
 The frontend calls Laravel through `/api`. During local development, Vite proxies those requests to `http://127.0.0.1:8000`. Laravel's default `.env.example` uses SQLite; MySQL is also supported through Laravel's database configuration.
+
+Tenant invitations use `FRONTEND_URL` in `backend/.env` to build the activation link. The default points to the local Vite server. The default `MAIL_MAILER=log` writes invitations to Laravel's local log instead of delivering email; configure a mail service before inviting real tenants.
 
 ## Getting started
 
@@ -93,7 +96,7 @@ The five curated homepage property photos have not been confirmed as belonging t
 
 ## Current scope
 
-The app currently supports public browsing and private staff workflows for rooms, tenants, contracts, payments, manual and meter-based utilities, inspections, accounts, corrections, and manual settlement. Online payments, utility email ingestion, and a tenant portal remain proposed work.
+The app currently supports public browsing and private staff workflows for rooms, tenants, contracts, payments, manual and meter-based utilities, inspections, accounts, corrections, and manual settlement. Online payments remain outside the app: staff record payments after arranging them with the client. Utility email samples are uploaded manually with an unverified sender address and a private PDF; there is no connected mailbox or automatic parsing. Staff must approve a sample before it creates a bill. Tenant access is limited to the invited tenant's signed contract terms and recorded tenancy payments. Tenant files, utility bill PDFs, staff notes, and other tenants' records are not exposed in the portal; account recovery and access removal are handled by staff.
 
 For a public-only Vercel site, use `frontend/` as the project root. Its `vercel.json` runs `npm run build:public`, which uses only confirmed property facts, shows every room as “Ask for availability,” and omits staff entry points and private uploads. The local backend and staff workspace stay local. Update the public snapshot deliberately when owner-approved property facts change; this build does not sync with the local database.
 

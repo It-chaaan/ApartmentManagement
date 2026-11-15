@@ -6,6 +6,7 @@ use App\Models\Contract;
 use App\Models\ContractFile;
 use App\Models\Room;
 use App\Models\Tenant;
+use App\Models\User;
 use App\Services\RentLedger;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -28,7 +29,18 @@ class TenancyController extends Controller
 
     public function updateTenant(Request $request, Tenant $tenant): JsonResponse
     {
-        $tenant->update($this->tenantData($request));
+        $data = $this->tenantData($request);
+        DB::transaction(function () use ($tenant, $data): void {
+            if (Str::lower((string) $tenant->email) !== Str::lower((string) ($data['email'] ?? null))) {
+                $user = User::where('tenant_id', $tenant->id)->lockForUpdate()->first();
+                if ($user) {
+                    $user->update(['is_active' => false]);
+                    DB::table('tenant_invitations')->where('user_id', $user->id)->whereNull('used_at')->delete();
+                    DB::table('sessions')->where('user_id', $user->id)->delete();
+                }
+            }
+            $tenant->update($data);
+        });
 
         return response()->json($tenant->fresh()->load('contracts.room.building'));
     }

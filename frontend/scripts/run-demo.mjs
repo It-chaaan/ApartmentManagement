@@ -172,6 +172,11 @@ async function main() {
   const vite = start(process.execPath, ['node_modules/vite/bin/vite.js', '--host=127.0.0.1', '--port=15174', '--strictPort', '--configLoader', 'native'], frontend,
     { ...process.env, E2E_BACKEND_URL: backendUrl, VITE_DEMO_MODE: '1' })
   await waitFor(frontendUrl, vite)
+  if (process.argv.includes('--portfolio')) {
+    const { capturePortfolio } = await import('./capture-portfolio.mjs')
+    await capturePortfolio({ frontendUrl, password, outputDirectory: resolve(frontend, '..', 'portfolio', 'browser-shots') })
+    return
+  }
   console.log(`Demo site: ${frontendUrl}/`)
   console.log(`Staff workspace: ${frontendUrl}/staff`)
   console.log('Owner email: demo-owner@example.test')

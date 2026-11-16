@@ -1,5 +1,7 @@
 <?php
 
+use App\Http\Middleware\PrivateResponse;
+use App\Http\Middleware\StaffRole;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
@@ -13,7 +15,10 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
-        $middleware->alias(['staff.role' => \App\Http\Middleware\StaffRole::class]);
+        $middleware->alias([
+            'staff.role' => StaffRole::class,
+            'private.response' => PrivateResponse::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

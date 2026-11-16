@@ -8,6 +8,7 @@
     "build": "tsc -b && vite build",
     "build:public": "tsc -b && vite build --mode public --configLoader native",
     "test:e2e": "node scripts/run-e2e.mjs",
+    "test:e2e:mfa": "node scripts/run-e2e.mjs --mfa tests/e2e/staff-mfa.spec.ts",
     "demo": "node scripts/run-demo.mjs",
     "demo:check": "node scripts/run-demo.mjs --check-only",
     "demo:reset": "node scripts/run-demo.mjs --clean",

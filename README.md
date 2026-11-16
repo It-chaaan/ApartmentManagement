@@ -13,7 +13,7 @@ The public website is at `/`; the staff workspace is at `/staff`.
 | Tenancies and contracts | Keeps tenant profiles, occupancy history, contract terms, renewals, signing payments, and private versions of signed contract PDFs. |
 | Payments and utilities | Records rent, manually entered electricity and water bills, and staff-approved meter-calculated bills from dated kWh or cubic-meter readings and a period rate. Supports partial payments, overpayments, refunds, traceable corrections, evidence-backed deposit deductions, private bill PDFs, and a staff-only reconciliation CSV. Staff can import a sample PDF from a utility email into a private review queue; only approval posts a bill. |
 | Inspections | Stores private room checklists and inspection photos. |
-| Staff access | Uses staff sessions for management actions. Owners can manage staff accounts and disable access. |
+| Staff access | Uses staff sessions and one-use six-digit email codes for management actions. Owners can manage staff accounts, reset staff passwords, and disable access. |
 | Tenant portal | Staff can invite a tenant after checking identity, recover access through a new invitation, or disable access. The tenant activates through a one-use email link and can see only their own signed contract terms and recorded tenancy payments at `/tenant`. |
 
 The dashboard can show all buildings or filter records to one building. The initial seeder creates two buildings and 18 rooms with **unverified** room status; staff must verify availability before advertising a room as available.
@@ -27,7 +27,7 @@ The dashboard can show all buildings or filter records to one building. The init
 
 The frontend calls Laravel through `/api`. During local development, Vite proxies those requests to `http://127.0.0.1:8000`. Laravel's default `.env.example` uses SQLite; MySQL is also supported through Laravel's database configuration.
 
-Tenant invitations use `FRONTEND_URL` in `backend/.env` to build the activation link. The default points to the local Vite server. The default `MAIL_MAILER=log` writes invitations to Laravel's local log instead of delivering email; configure a mail service before inviting real tenants.
+Tenant invitations use `FRONTEND_URL` in `backend/.env` to build the activation link. The default points to the local Vite server. Gmail SMTP delivers staff sign-in codes and tenant invitations while both app servers run locally.
 
 ## Getting started
 
@@ -53,6 +53,8 @@ php artisan staff:create-owner
 ```
 
 `staff:create-owner` interactively asks for a name, email, and password of at least 12 characters. It creates the first owner account only if one does not already exist. The seeder adds property data; it does not create a default login.
+
+Each staff sign-in requires a one-use six-digit code sent to that account's email. Codes expire after five minutes, and requesting another has a one-minute cooldown. Configure a Gmail account with 2-Step Verification and an app password in `backend/.env`: set `MAIL_USERNAME` to the full Gmail address, `MAIL_PASSWORD` to the app password, and `MAIL_FROM_ADDRESS` to the same address. The example already sets `MAIL_MAILER=smtp`, `MAIL_SCHEME=smtps`, `MAIL_HOST=smtp.gmail.com`, and `MAIL_PORT=465`. Never put the app password in Git or chat. If the owner loses access to their sign-in email, run `php artisan staff:change-owner-email` locally and provide the owner password and new email. Keep the backend `APP_KEY` stable because it encrypts private contract fields and protects sign-in code hashes.
 
 For MySQL instead of SQLite, create an empty database and update `DB_CONNECTION`, `DB_HOST`, `DB_PORT`, `DB_DATABASE`, `DB_USERNAME`, and `DB_PASSWORD` in `backend/.env` before running migrations. Keep `backend/.env` and all credentials out of Git.
 

@@ -52,7 +52,6 @@ export default function StaffUsersPage() {
       setAccounts(old => old.map(item => item.id === account.id ? account : item)); setNotice(account.is_active ? 'Staff access enabled.' : 'Staff access disabled.')
     } catch (e) { setError((e as Error).message) } finally { setBusy(false) }
   }
-
   return <section aria-label="User management" className="min-w-0 rounded-2xl border border-[#dedede] bg-white">
     <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[#dedede] p-4 sm:p-5"><h2 className="text-lg font-semibold">Staff accounts</h2><button type="button" onClick={() => { setShowCreate(true); setError(''); setNotice('') }} className="min-h-11 rounded-lg bg-[#111] px-4 text-sm font-semibold text-white">Add staff</button></div>
     <div className="p-4 sm:p-5">

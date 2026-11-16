@@ -6,7 +6,12 @@ export const getBuildings = () => request<Building[]>('/api/buildings')
 export const getRooms = () => request<Room[]>('/api/rooms')
 export const getRoom = (id: number) => request<Room>(`/api/rooms/${id}`)
 
-export const signIn = (email: string, password: string) => request<{ user: StaffUser }>('/api/login', {
+export type MfaState = 'verified' | 'email_required'
+export const getMfaStatus = () => request<{ state: MfaState }>('/api/staff/mfa/status', { signal: AbortSignal.timeout(4000) })
+export const sendMfaCode = () => request<{ message: string }>('/api/staff/mfa/send', { method: 'POST' })
+export const verifyMfa = (code: string) => request<{ state: 'verified'; user: StaffUser }>('/api/staff/mfa/verify', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ code }) })
+
+export const signIn = (email: string, password: string) => request<{ state: MfaState; user: StaffUser | null }>('/api/login', {
   method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ email, password }), signal: AbortSignal.timeout(8000),
 })
 

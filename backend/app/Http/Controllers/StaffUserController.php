@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 class StaffUserController extends Controller
@@ -28,7 +30,13 @@ class StaffUserController extends Controller
             'is_active' => ['sometimes', 'required', 'boolean'],
         ]);
         unset($data['password_confirmation']);
+        $emailChanged = isset($data['email']) && Str::lower($data['email']) !== Str::lower($user->email);
         $user->update($data);
+        if (array_key_exists('password', $data) || (($data['is_active'] ?? true) === false) || $emailChanged) {
+            $user->increment('staff_session_version');
+            DB::table('sessions')->where('user_id', $user->id)->delete();
+            DB::table('staff_email_challenges')->where('user_id', $user->id)->delete();
+        }
 
         return response()->json($user->only('id', 'name', 'email', 'role', 'is_active', 'created_at'));
     }

@@ -5,6 +5,7 @@ use App\Http\Controllers\ContractSigningController;
 use App\Http\Controllers\ManagementController;
 use App\Http\Controllers\PublicSiteController;
 use App\Http\Controllers\SettlementController;
+use App\Http\Controllers\StaffMfaController;
 use App\Http\Controllers\StaffOperationsController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\TenancyController;
@@ -18,16 +19,22 @@ use Illuminate\Support\Facades\Route;
 Route::prefix('api')->group(function () {
     Route::get('/public/site', [PublicSiteController::class, 'site']);
     Route::get('/public/photos/{photo}', [PublicSiteController::class, 'photo']);
-    Route::get('/csrf', fn (Request $request) => response()->json(['token' => csrf_token()]));
-    Route::post('/login', [ManagementController::class, 'login'])->middleware('throttle:5,1');
-    Route::post('/tenant/activate', [TenantPortalController::class, 'activate'])->middleware('throttle:5,1');
-    Route::post('/tenant/login', [TenantPortalController::class, 'login'])->middleware('throttle:5,1');
-    Route::middleware('auth')->prefix('tenant')->group(function () {
+    Route::get('/csrf', fn (Request $request) => response()->json(['token' => csrf_token()]))->middleware('private.response');
+    Route::post('/login', [ManagementController::class, 'login'])->middleware(['throttle:5,1', 'private.response']);
+    Route::post('/tenant/activate', [TenantPortalController::class, 'activate'])->middleware(['throttle:5,1', 'private.response']);
+    Route::post('/tenant/login', [TenantPortalController::class, 'login'])->middleware(['throttle:5,1', 'private.response']);
+    Route::middleware(['auth', 'private.response'])->prefix('staff/mfa')->group(function () {
+        Route::get('/status', [StaffMfaController::class, 'status']);
+        Route::post('/send', [StaffMfaController::class, 'send'])->middleware('throttle:5,1');
+        Route::post('/verify', [StaffMfaController::class, 'verify'])->middleware('throttle:5,1');
+    });
+    Route::post('/logout', [ManagementController::class, 'logout'])->middleware(['auth', 'private.response']);
+    Route::middleware(['auth', 'private.response'])->prefix('tenant')->group(function () {
         Route::get('/me', [TenantPortalController::class, 'me']);
         Route::get('/contracts', [TenantPortalController::class, 'contracts']);
         Route::post('/logout', [TenantPortalController::class, 'logout']);
     });
-    Route::middleware(['auth', 'staff.role'])->group(function () {
+    Route::middleware(['auth', 'staff.role', 'private.response'])->group(function () {
         Route::get('/me', [ManagementController::class, 'me']);
         Route::get('/staff/dashboard', [StaffOperationsController::class, 'dashboard']);
         Route::get('/staff/ledgers', [StaffOperationsController::class, 'ledgers']);
@@ -40,7 +47,6 @@ Route::prefix('api')->group(function () {
         Route::post('/rooms/{room}/inspections', [StaffOperationsController::class, 'storeInspection']);
         Route::post('/inspections/{inspection}/photos', [StaffOperationsController::class, 'uploadInspectionPhoto']);
         Route::get('/inspections/{inspection}/photos/{photo}', [StaffOperationsController::class, 'inspectionPhoto']);
-        Route::post('/logout', [ManagementController::class, 'logout']);
         Route::get('/buildings', [ManagementController::class, 'buildings']);
         Route::put('/buildings/{building}', [ManagementController::class, 'updateBuilding']);
         Route::get('/rooms', [ManagementController::class, 'rooms']);

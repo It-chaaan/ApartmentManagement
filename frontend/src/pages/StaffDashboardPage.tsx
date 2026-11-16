@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import * as staff from '../services/staff'
 import TenancyPage from './TenancyPage'
 import StaffSignIn from '../components/staff/StaffSignIn'
+import StaffMfaScreen from '../components/staff/StaffMfaScreen'
 import OperationsWorkspace from '../components/staff/OperationsWorkspace'
 import StaffShell, { type StaffSection } from '../components/staff/StaffShell'
 import UtilitiesPage from './UtilitiesPage'
@@ -19,6 +20,8 @@ const currentSection = (): StaffSection => {
 
 function StaffDashboardPage() {
   const [user, setUser] = useState<StaffUser | null>(null)
+  const [mfaState, setMfaState] = useState<staff.MfaState | null>(null)
+  const [sendCodeOnOpen, setSendCodeOnOpen] = useState(false)
   const [loading, setLoading] = useState(true)
   const [sessionNotice, setSessionNotice] = useState('')
   const [buildings, setBuildings] = useState<Building[]>([])
@@ -62,7 +65,11 @@ function StaffDashboardPage() {
     window.scrollTo(0, 0)
   }
 
-  useEffect(() => { staff.getSession().then(x => { setUser(x.user); if (x.user.role !== 'owner' && currentSection() === 'users') { window.history.replaceState(null, '', '#dashboard'); setSection('dashboard') } }).catch(e => {
+  useEffect(() => { staff.getMfaStatus().then(async status => {
+    if (status.state !== 'verified') { setMfaState(status.state); return }
+    const x = await staff.getSession(); setUser(x.user)
+    if (x.user.role !== 'owner' && currentSection() === 'users') { window.history.replaceState(null, '', '#dashboard'); setSection('dashboard') }
+  }).catch(e => {
     const message = (e as Error).message
     if (!/unauthenticated|401/i.test(message)) setSessionNotice('Staff services are unavailable. Start the Laravel server on port 8000, then sign in.')
   }).finally(() => setLoading(false)) }, [])
@@ -76,7 +83,7 @@ function StaffDashboardPage() {
   const refresh = async (id: number) => { const r = await staff.getRoom(id); setRooms(old => old.map(x => x.id === id ? r : x)); setSelected(r); setForm(toForm(r)) }
   const signIn = async (e: React.FormEvent) => {
     e.preventDefault(); setError(''); setBusy(true)
-    try { const x = await staff.signIn(email, password); setUser(x.user); setPassword('') }
+    try { const x = await staff.signIn(email, password); if (x.user) setUser(x.user); else { setMfaState(x.state); setSendCodeOnOpen(true) } setPassword('') }
     catch (e) {
       const message = (e as Error).message
       setError(/failed to fetch|networkerror|abort|timeout|request failed \(50[0-9]\)/i.test(message)
@@ -84,7 +91,7 @@ function StaffDashboardPage() {
         : message)
     } finally { setBusy(false) }
   }
-  const signOut = async () => { try { await staff.signOut(); setUser(null); setRooms([]); setBuildings([]); setSelected(null) } catch (e) { setError((e as Error).message) } }
+  const signOut = async () => { try { await staff.signOut(); setUser(null); setMfaState(null); setSendCodeOnOpen(false); setRooms([]); setBuildings([]); setSelected(null) } catch (e) { setError((e as Error).message) } }
   const save = async (e: React.FormEvent) => {
     e.preventDefault(); if (!selected || !form) return
     setBusy(true); setError(''); setNotice('')
@@ -113,6 +120,7 @@ function StaffDashboardPage() {
   const operations = (view: StaffSection) => <OperationsWorkspace view={view} buildingId={buildingFilter} rooms={buildingRooms} roomId={focusRoomId} setRoomId={setFocusRoomId} contractId={focusContractId} setContractId={setFocusContractId} onOpenRoom={open} onViewPayments={() => navigate('payments')} onViewInspections={() => navigate('inspections')} onOpenContract={id => { setFocusContractId(id); navigate('tenancy') }}/>
 
 
+  if (!user && mfaState === 'email_required') return <StaffMfaScreen autoSend={sendCodeOnOpen} onVerified={verifiedUser => { setUser(verifiedUser); setMfaState(null); setSendCodeOnOpen(false) }} onCancel={() => void signOut()} />
   if (!user) return <StaffSignIn email={email} password={password} error={error} busy={busy} checking={loading} notice={sessionNotice} onEmailChange={setEmail} onPasswordChange={setPassword} onSubmit={signIn} />
   return <main className="staff-dashboard min-h-screen bg-white text-[#111]">
     <StaffShell user={user} buildings={buildings} buildingId={buildingFilter} onBuildingChange={id => { setBuildingFilter(id); setFloorFilter('all'); setStatusFilter('all'); setRoomQuery(''); setFocusRoomId(null); setFocusContractId(null) }} section={section} onSectionChange={navigate} onSignOut={signOut}>

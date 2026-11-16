@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Tests\TestCase;
 
@@ -40,5 +41,24 @@ class StaffUserTest extends TestCase
     {
         User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'long-secret-password', 'role' => 'staff', 'is_active' => false]);
         $this->postJson('/api/login', ['email' => 'staff@example.test', 'password' => 'long-secret-password'])->assertUnprocessable();
+    }
+
+    public function test_staff_password_change_removes_existing_database_sessions(): void
+    {
+        $owner = User::create(['name' => 'Owner', 'email' => 'owner@example.test', 'password' => 'long-secret-password', 'role' => 'owner']);
+        $staff = User::create(['name' => 'Staff', 'email' => 'staff@example.test', 'password' => 'long-secret-password', 'role' => 'staff']);
+        DB::table('sessions')->insert([
+            'id' => 'existing-staff-session', 'user_id' => $staff->id, 'ip_address' => '127.0.0.1',
+            'user_agent' => 'test', 'payload' => 'test', 'last_activity' => time(),
+        ]);
+
+        $this->actingAs($owner);
+        $response = $this->getJson('/api/staff-users')->assertOk();
+        $this->assertStringContainsString('no-store', $response->headers->get('Cache-Control'));
+        $this->patchJson('/api/staff-users/'.$staff->id, [
+            'password' => 'updated-long-password', 'password_confirmation' => 'updated-long-password',
+        ])->assertOk();
+
+        $this->assertDatabaseMissing('sessions', ['id' => 'existing-staff-session']);
     }
 }

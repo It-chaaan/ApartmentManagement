@@ -27,8 +27,13 @@ class ManagementController extends Controller
             return response()->json(['message' => 'The email or password is incorrect.'], 422);
         }
         $request->session()->regenerate();
+        $request->session()->forget(['staff_mfa_verified', 'staff_mfa_pending_secret', 'staff_email_verified']);
+        $request->session()->put('staff_session_version', $request->user()->staff_session_version);
 
-        return response()->json(['user' => $request->user()->only('id', 'name', 'email', 'role')]);
+        return response()->json([
+            'state' => config('app.staff_mfa_required') ? 'email_required' : 'verified',
+            'user' => ! config('app.staff_mfa_required') ? $request->user()->only('id', 'name', 'email', 'role') : null,
+        ]);
     }
 
     public function logout(Request $request): JsonResponse

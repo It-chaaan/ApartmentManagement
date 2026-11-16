@@ -56,6 +56,8 @@ return [
 
     'frontend_url' => env('FRONTEND_URL', 'http://localhost:5173'),
 
+    'staff_mfa_required' => (bool) env('STAFF_MFA_REQUIRED', true),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

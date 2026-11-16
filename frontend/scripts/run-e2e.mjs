@@ -14,6 +14,7 @@ const backendUrl = 'http://127.0.0.1:18080'
 const frontendUrl = 'http://127.0.0.1:15173'
 const testPassword = `E2e-${randomBytes(18).toString('base64url')}`
 const browserPath = '0'
+const mfaRun = process.argv.includes('--mfa')
 const php = process.env.E2E_PHP || 'php'
 const children = []
 
@@ -69,6 +70,8 @@ async function main() {
     ...process.env,
     APP_ENV: 'e2e', APP_DEBUG: 'false', APP_KEY: `base64:${randomBytes(32).toString('base64')}`,
     APP_URL: backendUrl, DB_CONNECTION: 'sqlite', DB_DATABASE: database, DB_URL: '',
+    STAFF_MFA_REQUIRED: mfaRun ? 'true' : 'false',
+    MAIL_MAILER: 'array',
     LOCAL_FILESYSTEM_ROOT: join(runDirectory, 'private').replaceAll('\\', '/'),
     SESSION_DRIVER: 'database', CACHE_STORE: 'array', QUEUE_CONNECTION: 'sync',
     E2E_TEST_PASSWORD: testPassword,
@@ -81,9 +84,10 @@ async function main() {
   const vite = start(process.execPath, ['node_modules/vite/bin/vite.js', '--host=127.0.0.1', '--port=15173', '--strictPort', '--configLoader', 'native'], frontend, { ...process.env, E2E_BACKEND_URL: backendUrl })
   await waitFor(frontendUrl, vite)
 
-  const result = spawnSync(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', ...process.argv.slice(2)], {
+  const testArguments = process.argv.slice(2).filter(argument => argument !== '--mfa')
+  const result = spawnSync(process.execPath, ['node_modules/@playwright/test/cli.js', 'test', ...testArguments], {
     cwd: frontend,
-    env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: browserPath, E2E_ISOLATED: '1', E2E_BASE_URL: frontendUrl, E2E_TEST_PASSWORD: testPassword },
+    env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: browserPath, E2E_ISOLATED: '1', E2E_BASE_URL: frontendUrl, E2E_TEST_PASSWORD: testPassword, E2E_MFA: mfaRun ? '1' : '0' },
     stdio: 'inherit', shell: false,
   })
   if (result.error) throw result.error
